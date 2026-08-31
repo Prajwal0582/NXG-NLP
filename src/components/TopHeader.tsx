@@ -132,7 +132,7 @@ export default function TopHeader({
             {/* Account type + balance */}
             <div className="px-4 py-2.5 bg-[#f9fafb] border-y border-[#eaecf0]">
               <p className="text-xs text-[#475467] mb-1">{accountLabel(scenario)}</p>
-              {isCredit ? (
+              {isCredit || (!isFreemium && promptsRemaining <= 0 && creditsRemaining > 0) ? (
                 <>
                   <div className="flex items-center gap-1.5">
                     <LightningIcon />

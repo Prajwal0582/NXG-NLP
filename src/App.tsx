@@ -8,6 +8,7 @@ import FeedbackModal from "./components/FeedbackModal";
 import CreditConfirmModal from "./components/CreditConfirmModal";
 import Toast from "./components/Toast";
 import SaveListModal from "./components/SaveListModal";
+import CreditMilestoneModal from "./components/CreditMilestoneModal";
 
 import ScenarioLaunchView from "./views/ScenarioLaunchView";
 import LandingView from "./views/LandingView";
@@ -33,7 +34,7 @@ function getInitialPrompts(scenario: UserScenario): number {
 function getInitialCredits(scenario: UserScenario): number {
   if (scenario === "subscriber-credit") return 30;
   if (scenario === "subscriber-credit-0") return 0;
-  if (scenario === "subscriber-free") return 0;
+  if (scenario === "subscriber-free") return 30;
   return 0;
 }
 
@@ -62,6 +63,7 @@ export default function App() {
   // Credit-cost coach tip is shown once per session for subscriber-credit.
   const [creditCoachSeen, setCreditCoachSeen] = useState(false);
   const [saveListModalOpen, setSaveListModalOpen] = useState(false);
+  const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
 
   const [freeTotal, setFreeTotal] = useState(25);
   const reservedCredits = getReservedCredits(scenario);
@@ -113,7 +115,11 @@ export default function App() {
     const isSub = !isFreemiumScenario(scenario);
     const freeExhausted = promptsRemaining <= 0;
     if (!freeExhausted) {
-      setPromptsRemaining((p) => Math.max(0, p - 1));
+      const after = promptsRemaining - 1;
+      setPromptsRemaining(Math.max(0, after));
+      if (after <= 0 && scenario === "subscriber-free") {
+        setMilestoneModalOpen(true);
+      }
     } else if (isSub) {
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
@@ -138,13 +144,17 @@ export default function App() {
   function handleFollowUp(prompt: string) {
     const freeExhausted = promptsRemaining <= 0;
     const isSub = !isFreemiumScenario(scenario);
-    if (scenario === "subscriber-credit") {
+    if (scenario === "subscriber-credit" || scenario === "subscriber-credit-0") {
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
       return;
     }
     if (!freeExhausted) {
-      setPromptsRemaining((p) => Math.max(0, p - 1));
+      const after = promptsRemaining - 1;
+      setPromptsRemaining(Math.max(0, after));
+      if (after <= 0 && scenario === "subscriber-free") {
+        setMilestoneModalOpen(true);
+      }
     } else if (isSub) {
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
@@ -301,6 +311,14 @@ export default function App() {
           defaultName={submittedPrompt}
           onConfirm={confirmSaveList}
           onCancel={() => setSaveListModalOpen(false)}
+        />
+      )}
+
+      {milestoneModalOpen && (
+        <CreditMilestoneModal
+          freePromptsTotal={freeTotal}
+          onContinue={() => setMilestoneModalOpen(false)}
+          onViewBalance={() => setMilestoneModalOpen(false)}
         />
       )}
 

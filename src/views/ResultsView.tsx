@@ -806,14 +806,16 @@ export default function ResultsView({
 
   const free = scenario.startsWith("freemium-");
   const isCredit = scenario === "subscriber-credit" || scenario === "subscriber-credit-0";
-  const isCreditExhausted = isCredit && creditsRemaining <= 0 && promptsRemaining <= 0;
+  const isSubFreeTransitioned = scenario === "subscriber-free" && promptsRemaining <= 0 && creditsRemaining > 0;
+  const isCreditMode = isCredit || isSubFreeTransitioned;
+  const isCreditExhausted = isCreditMode && creditsRemaining <= 0 && promptsRemaining <= 0;
   const isExhausted = (free && promptsRemaining <= 0) || isCreditExhausted;
   // Low-balance warning — amber inline alert shown for the whole "5 and less"
   // range, decrementing with each prompt (5 → 4 → … → 1 → 0). At 0 the composer
   // send is locked but the field, alert and counter stay visible (exhausted state).
   const isLowPrompt = free && promptsRemaining <= 5;
   // Low = enough for ≤ 2 more prompts (each costs 2 credits).
-  const isLowCredit = isCredit && creditsRemaining <= 4;
+  const isLowCredit = isCreditMode && creditsRemaining <= 4;
 
   // Add a turn and run its processing animation. When `frozen` (user is out of
   // prompts), the block is added greyed and stuck — no timers run, so it never
@@ -860,7 +862,7 @@ export default function ResultsView({
     if (!p.trim()) return;
     const trimmed = p.trim();
     if (isExhausted) return;
-    if (isCredit) {
+    if (isCreditMode) {
       if (isLowCredit) { setLowBalancePrompt(trimmed); return; }
       sendPrompt(trimmed);
       return;
