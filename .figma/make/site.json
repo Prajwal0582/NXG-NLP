@@ -1,0 +1,10 @@
+{
+  "description": "Streamline product requirement documentation and collaboration for teams, enhancing clarity and efficiency in project management.",
+  "robots": {
+    "index": false
+  },
+  "accessibility": {
+    "addBypassLinks": false,
+    "ignoreReducedMotion": false
+  }
+}
