@@ -11,11 +11,11 @@ interface ScenarioCard {
 const CARDS: ScenarioCard[] = [
   {
     id: "freemium-24",
-    promptsOverride: 25,
+    promptsOverride: 20,
     title: "New Freemium User",
     badge: "freemium",
     bullets: [
-      "25 free prompts available",
+      "20 free prompts available",
       "Obfuscated lead details",
     ],
   },
@@ -41,11 +41,11 @@ const CARDS: ScenarioCard[] = [
   },
   {
     id: "subscriber-free",
-    promptsOverride: 25,
+    promptsOverride: 20,
     title: "New Subscriber",
     badge: "subscriber",
     bullets: [
-      "25 free prompts available",
+      "20 free prompts available",
       "Full, unmasked lead details",
     ],
   },

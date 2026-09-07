@@ -72,7 +72,7 @@ export default function App() {
     setScenario(s);
     const prompts = promptsOverride !== undefined ? promptsOverride : getInitialPrompts(s);
     setPromptsRemaining(prompts);
-    setFreeTotal(promptsOverride !== undefined ? promptsOverride : 25);
+    setFreeTotal(promptsOverride !== undefined ? promptsOverride : 20);
     setCreditsRemaining(getInitialCredits(s));
     setListSaved(false);
     setView("landing");
