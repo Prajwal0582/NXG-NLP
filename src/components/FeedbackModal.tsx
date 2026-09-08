@@ -6,7 +6,7 @@ interface FeedbackModalProps {
 }
 
 const REASONS = [
-  "Filters are not relevant to my business",
+  "Results are not relevant to my business",
   "The recommendations are too broad",
   "The recommendations are too narrow",
   "Other",
@@ -68,10 +68,6 @@ export default function FeedbackModal({ onClose, onSubmit }: FeedbackModalProps)
                 Help us Improve your Experience
               </p>
 
-              {/* Subtitle — 16px regular */}
-              <p className="text-[16px] font-normal leading-[24px] text-[#475467] text-center w-full">
-                {"It seems you didn't save your list. Was something unclear or missing? We'd love your feedback"}
-              </p>
             </div>
 
             {/* Checkbox items — 16px regular, gap 32 between groups */}
