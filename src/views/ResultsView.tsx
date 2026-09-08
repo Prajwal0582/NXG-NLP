@@ -554,9 +554,6 @@ function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }
       <button onClick={() => { setThumbsUp(false); onFeedback(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === false ? "text-[#e11d48]" : "text-[#98a2b3]"}`}>
         <svg viewBox="0 0 18 18" fill={thumbsUp === false ? "#e11d48" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M13 9V3h2v6h-2zm-1 1l-3 6H8.5A1.5 1.5 0 017 14.5v-2.5H3A1.5 1.5 0 011.5 10.5L2 5A1.5 1.5 0 013.5 3.5H12V10z" strokeLinejoin="round" /></svg>
       </button>
-      <button className="p-1 rounded hover:bg-[#f2f4f7] transition-colors text-[#98a2b3]">
-        <svg viewBox="0 0 18 18" fill="none" className="size-4" stroke="currentColor" strokeWidth="1.5"><circle cx="9" cy="9" r="7" /><path d="M9 8v5M9 6h.01" strokeLinecap="round" /></svg>
-      </button>
     </div>
   );
 }
