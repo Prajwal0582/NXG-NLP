@@ -918,7 +918,7 @@ export default function ResultsView({
                       <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="white" strokeWidth="1.5"><path d="M7 1v5l3 2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="7" r="5.5" /></svg>
                     </div>
                     <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-4 py-3">
-                      <p className="text-sm text-[#475467]">I can currently help only with finding leads for you.</p>
+                      <p className="text-sm text-[#475467]">Seems like <strong>invalid input</strong>. I can currently help only with finding leads for you.</p>
                     </div>
                   </div>
                 ) : !turn.isComplete ? (
