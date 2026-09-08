@@ -530,29 +530,12 @@ function ActionBanner({ isFreemium, totalLeads, onSave, onPurchase }: {
         <p className="text-xs text-[#667085] mt-0.5">{totalLeads} qualified leads ready to export or launch a campaign</p>
       </div>
       <div className="flex items-center gap-2">
-        {isFreemium ? (
-          <button onClick={onPurchase} className="flex items-center gap-1.5 px-4 py-2 bg-[#016dee] text-white text-xs font-semibold rounded-lg hover:bg-[#0052cc] transition-colors">
-            <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.5"><rect x="2" y="6" width="10" height="7" rx="1" /><path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" /></svg>
-            Unlock List
-          </button>
-        ) : (
-          <>
-            <button onClick={onSave} className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#d0d5dd] text-[#344054] text-xs font-semibold rounded-lg hover:bg-[#f9fafb] transition-colors">
-              <svg viewBox="0 0 16 16" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.5">
-                <path d="M13 13H3V3h7l3 3v7z" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M5 13V9h6v4M5 3h5v3H5z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Save list
-            </button>
-            <button className="flex items-center gap-1.5 px-4 py-2 bg-[#016dee] text-white text-xs font-semibold rounded-lg hover:bg-[#0052cc] transition-colors">
-              <svg viewBox="0 0 16 16" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.5">
-                <path d="M8 3v8m-3-5l3 3 3-3" strokeLinecap="round" strokeLinejoin="round" />
-                <path d="M3 14h10" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Export now
-            </button>
-          </>
-        )}
+        <button onClick={onSave} className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#d0d5dd] text-[#344054] text-xs font-semibold rounded-lg hover:bg-[#f9fafb] transition-colors">
+          Save list
+        </button>
+        <button onClick={onPurchase} className="flex items-center gap-1.5 px-4 py-2 bg-[#008dc3] text-white text-xs font-semibold rounded-lg hover:bg-[#007aab] transition-colors">
+          Purchase list
+        </button>
       </div>
     </div>
   );
