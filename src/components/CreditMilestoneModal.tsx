@@ -4,40 +4,36 @@ interface CreditMilestoneModalProps {
   onViewBalance: () => void;
 }
 
-export default function CreditMilestoneModal({ freePromptsTotal, onContinue, onViewBalance }: CreditMilestoneModalProps) {
+export default function CreditMilestoneModal({ freePromptsTotal, onContinue }: CreditMilestoneModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="bg-white rounded-xl shadow-2xl w-[420px] animate-fade-in px-8 py-8 text-center">
-        {/* Milestone badge */}
-        <span className="inline-block text-xs font-semibold text-[#0d7867] bg-[#f2f9f7] border border-[#b8e8d8] rounded-full px-4 py-1 mb-5">
-          Milestone
-        </span>
+      <div className="bg-white rounded-lg shadow-2xl w-[480px] animate-fade-in px-10 py-10 text-center">
+        {/* Check icon */}
+        <div className="flex justify-center mb-5">
+          <div className="size-12 rounded-full bg-[#e6f7f3] flex items-center justify-center">
+            <svg viewBox="0 0 24 24" fill="none" className="size-6 text-[#0d9373]" stroke="currentColor" strokeWidth="2.5">
+              <path d="M20 6L9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+        </div>
 
         {/* Title */}
-        <h2 className="text-xl font-bold text-[#1d2939] mb-2">
-          All {freePromptsTotal} free prompts used
+        <h2 className="text-[20px] font-medium leading-[30px] text-[#1d2939] mb-3">
+          You've used your {freePromptsTotal} free prompts.
         </h2>
 
         {/* Subtitle */}
-        <p className="text-sm text-[#667085] mb-8 leading-relaxed">
-          Great exploring! From here, each prompt used 2 credits from your balance
+        <p className="text-[16px] font-normal leading-[24px] text-[#475467] mb-8">
+          Keep exploring with Smart search across all datasets with natural-language prompts by spending just 2 credits/prompt.
         </p>
 
-        {/* Buttons */}
-        <div className="flex gap-3">
-          <button
-            onClick={onContinue}
-            className="flex-1 py-3 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors"
-          >
-            Continue
-          </button>
-          <button
-            onClick={onViewBalance}
-            className="flex-1 py-3 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors"
-          >
-            View balance
-          </button>
-        </div>
+        {/* Continue button */}
+        <button
+          onClick={onContinue}
+          className="w-full py-3.5 text-[18px] font-medium leading-[28px] text-white bg-[#008dc3] border border-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors"
+        >
+          Continue
+        </button>
       </div>
     </div>
   );

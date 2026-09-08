@@ -14,6 +14,7 @@ interface Turn {
   // Out of prompts: the processing block is shown greyed and stuck — no data is
   // ever generated (it never completes).
   frozen: boolean;
+  invalid?: boolean;
 }
 
 interface ResultsViewProps {
@@ -801,10 +802,13 @@ export default function ResultsView({
   // Add a turn and run its processing animation. When `frozen` (user is out of
   // prompts), the block is added greyed and stuck — no timers run, so it never
   // completes and no data is ever generated.
-  const addTurn = useCallback((p: string, frozen = false) => {
+  const addTurn = useCallback((p: string, frozen = false, invalid = false) => {
     const id = nextId.current++;
-    setTurns(prev => [...prev, { id, prompt: p, stepStatuses: ["waiting", "waiting", "waiting"], isComplete: false, frozen }]);
-    if (frozen) return;
+    setTurns(prev => [...prev, { id, prompt: p, stepStatuses: ["waiting", "waiting", "waiting"], isComplete: false, frozen, invalid }]);
+    if (frozen || invalid) {
+      if (invalid) setTimeout(() => setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, isComplete: true })), 600);
+      return;
+    }
 
     const upd = (stepIdx: number, status: StepStatus) =>
       setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, stepStatuses: t.stepStatuses.map((s, i) => i === stepIdx ? status : s) as StepStatus[] }));
@@ -822,7 +826,7 @@ export default function ResultsView({
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
-    addTurn(prompt, isExhausted);
+    addTurn(prompt, isExhausted, prompt.trim() === "123");
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to bottom when a new turn is added or completes
@@ -843,6 +847,11 @@ export default function ResultsView({
     if (!p.trim()) return;
     const trimmed = p.trim();
     if (isExhausted) return;
+    if (trimmed === "123") {
+      addTurn(trimmed, false, true);
+      setFollowUpInput("");
+      return;
+    }
     if (isCreditMode) {
       if (isLowCredit) { setLowBalancePrompt(trimmed); return; }
       sendPrompt(trimmed);
@@ -903,7 +912,16 @@ export default function ResultsView({
               <div key={turn.id} className="mb-8">
                 <UserBubble prompt={turn.prompt} />
 
-                {!turn.isComplete ? (
+                {turn.invalid && turn.isComplete ? (
+                  <div className="mt-3 flex items-start gap-3">
+                    <div className="size-7 rounded-full bg-gradient-to-br from-[#60a5fa] to-[#c084fc] flex items-center justify-center shrink-0">
+                      <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="white" strokeWidth="1.5"><path d="M7 1v5l3 2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="7" r="5.5" /></svg>
+                    </div>
+                    <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-4 py-3">
+                      <p className="text-sm text-[#475467]">I can currently help only with finding leads for you.</p>
+                    </div>
+                  </div>
+                ) : !turn.isComplete ? (
                   <InlineProcessingBlock stepStatuses={turn.stepStatuses} frozen={turn.frozen} />
                 ) : isFirstTurn ? (
                   <FirstTurnResult
@@ -980,8 +998,8 @@ export default function ResultsView({
                 <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
               </svg>
               <p className="text-xs text-[#b54708]">
-                {promptsRemaining} free prompt{promptsRemaining === 1 ? "" : "s"} remaining.{" "}
-                <button onClick={onPurchase} className="underline font-medium hover:text-[#93370d] transition-colors">Upgrade anytime for unlimited access.</button>
+                {promptsRemaining} free prompts remaining. For unlimited feature access -{" "}
+                <button onClick={onPurchase} className="underline font-medium hover:text-[#93370d] transition-colors">Upgrade now</button>
               </p>
             </div>
           )}

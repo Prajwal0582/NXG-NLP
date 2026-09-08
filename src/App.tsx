@@ -106,6 +106,8 @@ export default function App() {
     setSubmittedPrompt(prompt);
     setView("results"); // conversation view — no separate processing screen
 
+    if (prompt.trim() === "123") return;
+
     if (scenario === "subscriber-credit") {
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
