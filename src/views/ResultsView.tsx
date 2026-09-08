@@ -1030,9 +1030,9 @@ export default function ResultsView({
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
                   </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
+                  <p className="text-sm font-semibold text-[#b54708]">Insufficient credit balance.</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your 5 free prompts renew on September 1, 2026. Upgrade for unlimited access to this feature.</p>
+                <p className="text-sm text-[#b54708] ml-6">Your account credits have been exhausted. Purchase more credits to continue using AI search.</p>
               </div>
               <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
             </div>
