@@ -992,8 +992,8 @@ export default function ResultsView({
             </div>
           )}
 
-          {/* Low-balance inline alert (amber) — decrements with each prompt, 0 when exhausted */}
-          {isLowPrompt && (
+          {/* Freemium low-balance / exhausted inline alert */}
+          {isLowPrompt && !isExhausted && (
             <div className="flex items-center gap-2 bg-[#fffaeb] border border-[#fedf89] rounded-lg px-3.5 py-2 mb-2">
               <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
                 <circle cx="8" cy="8" r="6.5" />
@@ -1006,7 +1006,24 @@ export default function ResultsView({
             </div>
           )}
 
-          {/* Credits exhausted alert (subscriber-credit-0) */}
+          {/* Freemium exhausted inline alert */}
+          {free && promptsRemaining <= 0 && (
+            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="8" cy="8" r="6.5" />
+                    <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                  </svg>
+                  <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
+                </div>
+                <p className="text-sm text-[#b54708] ml-6">Your {freePromptsTotal} free credits will renew on your next billing cycle, on every 1st of September.</p>
+              </div>
+              <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
+            </div>
+          )}
+
+          {/* Subscriber credits exhausted inline alert */}
           {isCreditExhausted && (
             <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
               <div className="flex flex-col gap-0.5">
@@ -1015,9 +1032,9 @@ export default function ResultsView({
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
                   </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">No credits remaining.</p>
+                  <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your credits will renew on your next billing cycle, or you can top up now.</p>
+                <p className="text-sm text-[#b54708] ml-6">Your 5 free credits will renew on your next billing cycle, on every 1st of September.</p>
               </div>
               <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
             </div>

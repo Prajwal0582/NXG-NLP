@@ -85,11 +85,11 @@ export default function TopHeader({
 
           {pillOpen && (
             <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl border border-[#e4e7ec] shadow-lg z-50 p-4 animate-fade-in">
-              <p className="text-sm font-semibold text-[#1d2939] mb-1">AI Prompt Allowance</p>
+              <p className="text-sm font-semibold text-[#1d2939] mb-1">Your Free AI Prompts</p>
               <p className="text-sm text-[#475467] mb-1">
                 <span className="font-semibold text-[#1d2939]">{promptsRemaining}</span> of {freePromptsTotal} free prompts remaining.
               </p>
-              <p className="text-xs text-[#667085] mb-3">Your remaining prompts update as you continue your search.</p>
+              <p className="text-xs text-[#667085] mb-3">Your {freePromptsTotal} free prompts reset automatically each month.</p>
               <button
                 onClick={() => setPillOpen(false)}
                 className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors"

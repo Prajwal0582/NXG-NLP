@@ -80,7 +80,7 @@ function EmailsIcon() {
 
 const STATS = [
   { label: "Households",  value: "124,440,115", Icon: HouseholdsIcon },
-  { label: "Individuals", value: "318,554,426", Icon: IndividualsIcon },
+  { label: "Individuals", value: "318,554,426...", Icon: IndividualsIcon },
   { label: "Emails",      value: "187,585,349", Icon: EmailsIcon },
 ];
 
@@ -132,8 +132,7 @@ export default function ManualSearchView({ onBack }: ManualSearchViewProps) {
               <DownloadIcon />
             </button>
             <button
-              disabled
-              className="px-4 py-2 text-sm font-medium rounded-lg bg-[#f2f4f7] text-[#98a2b3] cursor-not-allowed"
+              className="px-4 py-2 text-sm font-medium rounded-lg bg-[#016dee] text-white hover:bg-[#0052cc] transition-colors"
             >
               Save list
             </button>
@@ -149,11 +148,11 @@ export default function ManualSearchView({ onBack }: ManualSearchViewProps) {
           <div className="flex items-center gap-3 mb-4">
             <div className="relative shrink-0">
               <select
-                defaultValue="US Consumers"
+                defaultValue="US Businesses"
                 className="appearance-none border border-[#d0d5dd] rounded-lg pl-3.5 pr-9 py-2.5 text-sm font-medium text-[#344054] bg-white hover:bg-[#f9fafb] focus:outline-none focus:border-[#016dee] focus:ring-1 focus:ring-[#016dee] transition-colors cursor-pointer"
               >
-                <option>US Consumers</option>
                 <option>US Businesses</option>
+                <option>US Consumers</option>
               </select>
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[#667085] pointer-events-none">
                 <ChevronDown />

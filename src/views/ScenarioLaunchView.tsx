@@ -51,11 +51,11 @@ const CARDS: ScenarioCard[] = [
   },
   {
     id: "subscriber-free",
-    promptsOverride: 10,
+    promptsOverride: 5,
     title: "Existing Subscriber",
     badge: "subscriber",
     bullets: [
-      "10 free prompts available",
+      "5 free prompts available",
       "Full, unmasked lead details",
     ],
   },
