@@ -6,7 +6,8 @@ export type View =
   | 'manual-search'
   | 'saved-lists'
   | 'purchase'
-  | 'purchase-success';
+  | 'purchase-success'
+  | 'plans';
 
 export type UserScenario =
   | 'freemium-24'

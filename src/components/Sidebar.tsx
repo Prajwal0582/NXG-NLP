@@ -6,6 +6,7 @@ interface SidebarProps {
   currentView: View;
   onNavigate: (view: View) => void;
   isSubscriber: boolean;
+  onPlans: () => void;
 }
 
 function SearchIcon() {
@@ -114,8 +115,8 @@ const navItems: NavItem[] = [
   { id: "support",     label: "Support",          icon: SupportIcon,       view: null },
 ];
 
-export default function Sidebar({ activeTab, onTabChange, currentView, onNavigate, isSubscriber }: SidebarProps) {
-  const isSearchActive = currentView === "landing" || currentView === "processing" || currentView === "results" || currentView === "manual-search";
+export default function Sidebar({ activeTab, onTabChange, currentView, onNavigate, isSubscriber, onPlans }: SidebarProps) {
+  const isSearchActive = currentView === "landing" || currentView === "processing" || currentView === "results" || currentView === "manual-search" || currentView === "plans";
   const isListActive = currentView === "saved-lists";
 
   return (
@@ -184,7 +185,7 @@ export default function Sidebar({ activeTab, onTabChange, currentView, onNavigat
             <p className="text-white text-xs leading-relaxed mb-3">
               {"Whether you're all in or just need a list, we've got flexible options to help you start faster."}
             </p>
-            <button className="w-full bg-[#008dc3] text-white text-sm font-medium py-1.5 rounded border border-[#008dc3] hover:bg-[#007aab] transition-colors">
+            <button onClick={onPlans} className="w-full bg-[#008dc3] text-white text-sm font-medium py-1.5 rounded border border-[#008dc3] hover:bg-[#007aab] transition-colors">
               See pricing
             </button>
           </div>

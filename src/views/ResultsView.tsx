@@ -29,6 +29,7 @@ interface ResultsViewProps {
   onBack: () => void;
   onHistory: () => void;
   onPurchase: () => void;
+  onPlans: () => void;
   onSave: () => void;
   onFeedback: (positive: boolean) => void;
   onFollowUp: (p: string) => void;
@@ -772,6 +773,7 @@ export default function ResultsView({
   onBack,
   onHistory,
   onPurchase,
+  onPlans,
   onSave,
   onFeedback,
   onFollowUp,
@@ -999,7 +1001,7 @@ export default function ResultsView({
               </svg>
               <p className="text-xs text-[#b54708]">
                 {promptsRemaining} free prompts remaining. For unlimited feature access -{" "}
-                <button onClick={onPurchase} className="underline font-medium hover:text-[#93370d] transition-colors">Upgrade now</button>
+                <button onClick={onPlans} className="underline font-medium hover:text-[#93370d] transition-colors">Upgrade now</button>
               </p>
             </div>
           )}
@@ -1017,7 +1019,7 @@ export default function ResultsView({
                 </div>
                 <p className="text-sm text-[#b54708] ml-6">Your {freePromptsTotal} free prompts renew on September 1, 2026. Upgrade for unlimited access to this feature.</p>
               </div>
-              <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
+              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
             </div>
           )}
 
@@ -1030,9 +1032,9 @@ export default function ResultsView({
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
                   </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">Insufficient credit balance.</p>
+                  <p className="text-sm font-semibold text-[#b54708]">Insufficient credit balance</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your account credits have been exhausted. Purchase more credits to continue using AI search.</p>
+                <p className="text-sm text-[#b54708] ml-6">Your account credits have been exhausted. Purchase more credits to continue using Smart search.</p>
               </div>
               <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
             </div>

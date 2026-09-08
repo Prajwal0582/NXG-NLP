@@ -17,6 +17,7 @@ import ManualSearchView from "./views/ManualSearchView";
 import SavedListsView from "./views/SavedListsView";
 import PurchaseView from "./views/PurchaseView";
 import PurchaseSuccessView from "./views/PurchaseSuccessView";
+import PlansView from "./views/PlansView";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
@@ -200,6 +201,7 @@ export default function App() {
             onBack={() => setView("landing")}
             onHistory={() => setHistoryOpen(true)}
             onPurchase={() => setView("purchase")}
+            onPlans={() => setView("plans")}
             onSave={handleSaveList}
             onFeedback={handleFeedback}
             onFollowUp={handleFollowUp}
@@ -232,6 +234,9 @@ export default function App() {
           />
         );
 
+      case "plans":
+        return <PlansView onBack={() => setView("landing")} />;
+
       default:
         return null;
     }
@@ -257,6 +262,7 @@ export default function App() {
         currentView={view}
         onNavigate={handleNavigate}
         isSubscriber={!isFree}
+        onPlans={() => setView("plans")}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -269,6 +275,7 @@ export default function App() {
           creditsRemaining={creditsRemaining}
           reservedCredits={reservedCredits}
           onLogout={handleLogout}
+          onPlans={() => setView("plans")}
         />
         <div className="flex-1 overflow-hidden bg-white">
           {renderContent()}

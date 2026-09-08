@@ -10,6 +10,7 @@ interface TopHeaderProps {
   creditsRemaining: number;
   reservedCredits: number;
   onLogout: () => void;
+  onPlans: () => void;
 }
 
 function LightningIcon({ className = "size-3", fill = "#016dee" }: { className?: string; fill?: string }) {
@@ -41,6 +42,7 @@ export default function TopHeader({
   isFreemium,
   creditsRemaining,
   onLogout,
+  onPlans,
 }: TopHeaderProps) {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [pillOpen, setPillOpen] = useState(false);
@@ -91,7 +93,7 @@ export default function TopHeader({
               </p>
               <p className="text-xs text-[#667085] mb-3">Your {freePromptsTotal} free prompts reset automatically each month.</p>
               <button
-                onClick={() => setPillOpen(false)}
+                onClick={() => { setPillOpen(false); onPlans(); }}
                 className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors"
               >
                 Upgrade account
