@@ -997,7 +997,7 @@ export default function ResultsView({
                   </svg>
                   <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your {freePromptsTotal} free credits will renew on your next billing cycle, on every 1st of September.</p>
+                <p className="text-sm text-[#b54708] ml-6">Your {freePromptsTotal} free prompts renew on September 1, 2026. Upgrade for unlimited access to this feature.</p>
               </div>
               <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
             </div>
@@ -1014,7 +1014,7 @@ export default function ResultsView({
                   </svg>
                   <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your 5 free credits will renew on your next billing cycle, on every 1st of September.</p>
+                <p className="text-sm text-[#b54708] ml-6">Your 5 free prompts renew on September 1, 2026. Upgrade for unlimited access to this feature.</p>
               </div>
               <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
             </div>

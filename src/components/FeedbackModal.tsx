@@ -107,18 +107,12 @@ export default function FeedbackModal({ onClose, onSubmit }: FeedbackModalProps)
             </div>
 
             {/* Buttons — equal width, 18px medium, gap 32 */}
-            <div className="flex items-start gap-8 w-full">
+            <div className="w-full">
               <button
                 onClick={handleSubmit}
-                className="flex-1 bg-[#008dc3] border border-[#008dc3] text-white text-[18px] font-medium leading-[28px] py-3.5 rounded-lg hover:bg-[#007aab] transition-colors"
+                className="w-full bg-[#008dc3] border border-[#008dc3] text-white text-[18px] font-medium leading-[28px] py-3.5 rounded-lg hover:bg-[#007aab] transition-colors"
               >
                 Submit
-              </button>
-              <button
-                onClick={onClose}
-                className="flex-1 bg-white border border-[#d0d5dd] text-[#475467] text-[18px] font-medium leading-[28px] py-3.5 rounded-lg hover:bg-[#f9fafb] transition-colors"
-              >
-                Skip
               </button>
             </div>
           </div>
