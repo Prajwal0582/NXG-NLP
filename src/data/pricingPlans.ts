@@ -236,7 +236,7 @@ export const COMPARE_SECTIONS: { title: string; rows: CompareRow[] }[] = [
   {
     title: "Sales tools",
     rows: [
-      { label: "User licenses", basic: "1", pro: "1", team: "Includes 5" },
+      { label: "User licenses", basic: "1", pro: "1", team: "includes 5" },
       { label: "Business & Consumer databases", basic: true, pro: true, team: true },
       { label: "Contact information", basic: true, pro: true, team: true },
       { label: "Weekly data refresh", basic: true, pro: true, team: true },
@@ -296,7 +296,7 @@ export const ADDON_ROWS = [
   },
   {
     title: "Purchase Signals",
-    description: "Signals based on household purchase behavior and propensity.",
+    description: "Intent signals based on households with purchases observed in transaction data.",
     detail: "Add to your plan for an additional $50/month for each user.",
   },
   {

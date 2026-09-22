@@ -274,8 +274,8 @@ export default function App() {
     }
   }
 
-  // Hide sidebar and header on scenario-launch screen
-  if (view === "scenario-launch") {
+  // Full-page experiences: no app sidebar / top header
+  if (view === "scenario-launch" || view === "plans" || view === "subscription-checkout") {
     return (
       <>
         {renderContent()}
