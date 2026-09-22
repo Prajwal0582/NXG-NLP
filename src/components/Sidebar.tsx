@@ -116,7 +116,7 @@ const navItems: NavItem[] = [
 ];
 
 export default function Sidebar({ activeTab, onTabChange, currentView, onNavigate, isSubscriber, onPlans }: SidebarProps) {
-  const isSearchActive = currentView === "landing" || currentView === "processing" || currentView === "results" || currentView === "manual-search" || currentView === "plans";
+  const isSearchActive = currentView === "landing" || currentView === "processing" || currentView === "results" || currentView === "manual-search" || currentView === "plans" || currentView === "subscription-checkout";
   const isListActive = currentView === "saved-lists";
 
   return (

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import type { View, UserScenario, ActiveTab } from "./types";
+import type { View, UserScenario, ActiveTab, BillingPeriod, SelectedPlanId } from "./types";
 
 import Sidebar from "./components/Sidebar";
 import TopHeader from "./components/TopHeader";
@@ -18,6 +18,7 @@ import SavedListsView from "./views/SavedListsView";
 import PurchaseView from "./views/PurchaseView";
 import PurchaseSuccessView from "./views/PurchaseSuccessView";
 import PlansView from "./views/PlansView";
+import SubscriptionCheckoutView from "./views/SubscriptionCheckoutView";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
@@ -68,6 +69,14 @@ export default function App() {
 
   const [freeTotal, setFreeTotal] = useState(25);
   const reservedCredits = getReservedCredits(scenario);
+  const [selectedPlan, setSelectedPlan] = useState<SelectedPlanId>("pro");
+  const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>("monthly");
+  const [plansReturnView, setPlansReturnView] = useState<View>("landing");
+
+  function openPlans(from: View = view === "scenario-launch" ? "landing" : view) {
+    setPlansReturnView(from === "plans" || from === "subscription-checkout" ? "landing" : from);
+    setView("plans");
+  }
 
   function applyScenario(s: UserScenario, promptsOverride?: number) {
     setScenario(s);
@@ -201,7 +210,7 @@ export default function App() {
             onBack={() => setView("landing")}
             onHistory={() => setHistoryOpen(true)}
             onPurchase={() => setView("purchase")}
-            onPlans={() => setView("plans")}
+            onPlans={() => openPlans("results")}
             onSave={handleSaveList}
             onFeedback={handleFeedback}
             onFollowUp={handleFollowUp}
@@ -235,7 +244,30 @@ export default function App() {
         );
 
       case "plans":
-        return <PlansView onBack={() => setView("landing")} />;
+        return (
+          <PlansView
+            onBack={() => setView(plansReturnView === "subscription-checkout" ? "landing" : plansReturnView)}
+            onSelectPlan={(planId, billing) => {
+              setSelectedPlan(planId);
+              setSelectedBilling(billing);
+              setView("subscription-checkout");
+            }}
+            onSearchLeads={() => setView("landing")}
+          />
+        );
+
+      case "subscription-checkout":
+        return (
+          <SubscriptionCheckoutView
+            planId={selectedPlan}
+            billing={selectedBilling}
+            onBack={() => setView("plans")}
+            onComplete={() => {
+              setToast({ message: `${selectedPlan.charAt(0).toUpperCase()}${selectedPlan.slice(1)} ${selectedBilling} subscription started.`, type: "success" });
+              setView("landing");
+            }}
+          />
+        );
 
       default:
         return null;
@@ -262,7 +294,7 @@ export default function App() {
         currentView={view}
         onNavigate={handleNavigate}
         isSubscriber={!isFree}
-        onPlans={() => setView("plans")}
+        onPlans={() => openPlans("landing")}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -275,7 +307,7 @@ export default function App() {
           creditsRemaining={creditsRemaining}
           reservedCredits={reservedCredits}
           onLogout={handleLogout}
-          onPlans={() => setView("plans")}
+          onPlans={() => openPlans("landing")}
         />
         <div className="flex-1 overflow-hidden bg-white">
           {renderContent()}
