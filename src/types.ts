@@ -7,7 +7,11 @@ export type View =
   | 'saved-lists'
   | 'purchase'
   | 'purchase-success'
-  | 'plans';
+  | 'plans'
+  | 'subscription-checkout';
+
+export type BillingPeriod = 'monthly' | 'annual';
+export type SelectedPlanId = 'basic' | 'pro' | 'team';
 
 export type UserScenario =
   | 'freemium-24'
