@@ -17,6 +17,17 @@ export interface PlanPricing {
   strikePrice?: string;
 }
 
+export interface FeatureItem {
+  label: string;
+  bold?: boolean;
+  info?: boolean;
+  /** Expandable parent row with nested children */
+  expandable?: boolean;
+  /** Start expanded (e.g. Buy list subscription features) */
+  defaultExpanded?: boolean;
+  children?: { label: string; info?: boolean }[];
+}
+
 export interface PlanDefinition {
   id: PlanId;
   category: string;
@@ -30,11 +41,10 @@ export interface PlanDefinition {
   accessTitle: string;
   accessItems: string[];
   includedTitle: string;
-  includedItems: { label: string; bold?: boolean; info?: boolean; chevron?: boolean }[];
+  includedItems: FeatureItem[];
   notIncludedTitle?: string;
-  notIncludedItems?: { label: string; info?: boolean; nested?: boolean }[];
-  subscriptionFeaturesExpandable?: boolean;
-  addons?: { label: string }[];
+  notIncludedItems?: FeatureItem[];
+  addons?: { label: string; info?: boolean }[];
 }
 
 export const PLANS: PlanDefinition[] = [
@@ -79,7 +89,7 @@ export const PLANS: PlanDefinition[] = [
       { label: "CRM integration", info: true },
     ],
     addons: [
-      { label: "Consumer cellphone" },
+      { label: "Consumer cellphone", info: true },
       { label: "Buyer Intent" },
       { label: "Purchase Signals" },
     ],
@@ -113,7 +123,17 @@ export const PLANS: PlanDefinition[] = [
     ],
     includedTitle: "Included Features",
     includedItems: [
-      { label: "Everything in Basic", bold: true, chevron: true },
+      {
+        label: "Everything in Basic",
+        bold: true,
+        expandable: true,
+        children: [
+          { label: "Weekly data refresh" },
+          { label: "Customer profile analysis" },
+          { label: "Dedicated advisor & expert guidance" },
+          { label: "Direct mail campaigns", info: true },
+        ],
+      },
       { label: "Credits (500/month)" },
       { label: "Export leads (uses credits)" },
       { label: "Email unlocks (uses credits)" },
@@ -128,7 +148,7 @@ export const PLANS: PlanDefinition[] = [
       { label: "Additional user license" },
     ],
     addons: [
-      { label: "Consumer cellphone" },
+      { label: "Consumer cellphone", info: true },
       { label: "Buyer Intent" },
       { label: "Purchase Signals" },
     ],
@@ -160,7 +180,19 @@ export const PLANS: PlanDefinition[] = [
     ],
     includedTitle: "Included Features",
     includedItems: [
-      { label: "Everything in Pro", bold: true, chevron: true },
+      {
+        label: "Everything in Pro",
+        bold: true,
+        expandable: true,
+        children: [
+          { label: "Credits (500/month)" },
+          { label: "Export leads (uses credits)" },
+          { label: "Email unlocks (uses credits)" },
+          { label: "Email Campaigns (uses credits)" },
+          { label: "CRM integration", info: true },
+          { label: "Direct mail campaigns", info: true },
+        ],
+      },
       { label: "5 user licenses included" },
       { label: "Assign leads to team members" },
       { label: "Track team activities" },
@@ -171,11 +203,9 @@ export const PLANS: PlanDefinition[] = [
       { label: "On-demand additional licenses" },
       { label: "Team collaboration" },
       { label: "Dedicated onboarding support" },
-      { label: "CRM integration", info: true },
-      { label: "Direct mail campaigns", info: true },
     ],
     addons: [
-      { label: "Consumer cellphone" },
+      { label: "Consumer cellphone", info: true },
       { label: "Buyer Intent" },
       { label: "Purchase Signals" },
     ],
@@ -210,15 +240,20 @@ export const PLANS: PlanDefinition[] = [
     ],
     notIncludedTitle: "Not Included",
     notIncludedItems: [
-      { label: "Subscription features" },
-      { label: "Weekly data refresh", nested: true },
-      { label: "Email and direct mail campaign", nested: true },
-      { label: "CRM integration", nested: true },
-      { label: "Buyer intent", nested: true },
-      { label: "Consumer cellphone", nested: true },
-      { label: "Team collaboration", nested: true },
+      {
+        label: "Subscription features",
+        expandable: true,
+        defaultExpanded: true,
+        children: [
+          { label: "Weekly data refresh" },
+          { label: "Email and direct mail campaign" },
+          { label: "CRM integration" },
+          { label: "Buyer intent" },
+          { label: "Consumer cellphone" },
+          { label: "Team collaboration" },
+        ],
+      },
     ],
-    subscriptionFeaturesExpandable: true,
   },
 ];
 
@@ -256,7 +291,7 @@ export const COMPARE_SECTIONS: { title: string; rows: CompareRow[] }[] = [
         pro: "uses credits",
         team: "uses credits",
       },
-      { label: "Performance tracking", basic: true, pro: true, team: true },
+      { label: "Performance tracking", basic: false, pro: false, team: true },
     ],
   },
   {
@@ -301,7 +336,7 @@ export const ADDON_ROWS = [
   },
   {
     title: "Consumer cellphones",
-    description: "Append consumer cellphone numbers where available.",
+    description: "",
     detail: "Talk to a rep to get more details.",
   },
 ];
@@ -310,4 +345,33 @@ export function planPriceLabel(planId: Exclude<PlanId, "buy-list">, billing: Bil
   const plan = PLANS.find((p) => p.id === planId)!;
   const pricing = billing === "monthly" ? plan.monthly : plan.annual;
   return `$${pricing.display}${pricing.suffix}`;
+}
+
+/** Tooltip copy for feature / compare info icons (from design screenshots). */
+export const FEATURE_TOOLTIPS: Record<string, string> = {
+  "Direct mail campaigns":
+    "Additional charge for postage, billed separately from credits, paid at time of send",
+  "Direct mail marketing":
+    "Additional charge for postage, billed separately from credits, paid at time of send",
+  "CRM integration": "CRM integration allows you to export data directly to your CRM",
+  "CRM Integration": "CRM integration allows you to export data directly to your CRM",
+  "Consumer cellphone":
+    "Access mobile phone numbers associated with U.S consumers and households, where available and permitted",
+  "Consumer cellphones":
+    "Access mobile phone numbers associated with U.S consumers and households, where available and permitted",
+  "Email marketing": "Requires email addresses unlocked using credits",
+  "includes 5": "Contact us for multi-user discounts",
+  "Includes 5": "Contact us for multi-user discounts",
+  "unlock with credit purchase": "Each business or consumer record costs 1 credit",
+  "uses credits:Exports": "Exporting each business or consumer record uses one credit",
+  "uses credits:CRM Integration": "Exporting each business or consumer record uses one credit",
+  "uses credits:Email addresses": "Each email address uses one credit",
+  "uses credits": "Exporting each business or consumer record uses one credit",
+};
+
+export function resolveTooltip(labelOrValue: string, rowLabel?: string): string | undefined {
+  if (rowLabel && labelOrValue === "uses credits") {
+    return FEATURE_TOOLTIPS[`uses credits:${rowLabel}`] ?? FEATURE_TOOLTIPS["uses credits"];
+  }
+  return FEATURE_TOOLTIPS[labelOrValue];
 }

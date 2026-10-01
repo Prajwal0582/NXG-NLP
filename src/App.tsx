@@ -1,5 +1,6 @@
-import { useState } from "react";
-import type { View, UserScenario, ActiveTab, BillingPeriod, SelectedPlanId } from "./types";
+import { useEffect, useState } from "react";
+import type { View, UserScenario, ActiveTab, BillingPeriod, SelectedPlanId, ListPurchaseContext } from "./types";
+import { buildListPurchaseContext } from "./data/searchScenarios";
 
 import Sidebar from "./components/Sidebar";
 import TopHeader from "./components/TopHeader";
@@ -72,11 +73,29 @@ export default function App() {
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlanId>("pro");
   const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>("monthly");
   const [plansReturnView, setPlansReturnView] = useState<View>("landing");
+  /** Set only when entering Pricing from SignalFuse "Purchase list". Cleared for standard Access Pricing. */
+  const [listPurchaseContext, setListPurchaseContext] = useState<ListPurchaseContext | null>(null);
 
   function openPlans(from: View = view === "scenario-launch" ? "landing" : view) {
+    // Standard pricing discovery — never inherit a prior list purchase context.
+    setListPurchaseContext(null);
     setPlansReturnView(from === "plans" || from === "subscription-checkout" ? "landing" : from);
     setView("plans");
   }
+
+  function openPlansForListPurchase(resultCount: number) {
+    const ctx = buildListPurchaseContext(submittedPrompt, resultCount);
+    setListPurchaseContext(ctx);
+    setPlansReturnView("results");
+    setView("plans");
+  }
+
+  useEffect(() => {
+    document.title =
+      view === "plans" || view === "subscription-checkout"
+        ? "SalesGenie — Pricing"
+        : "SalesGenie";
+  }, [view]);
 
   function applyScenario(s: UserScenario, promptsOverride?: number) {
     setScenario(s);
@@ -85,6 +104,7 @@ export default function App() {
     setFreeTotal(promptsOverride !== undefined ? promptsOverride : 20);
     setCreditsRemaining(getInitialCredits(s));
     setListSaved(false);
+    setListPurchaseContext(null);
     setView("landing");
   }
 
@@ -114,6 +134,7 @@ export default function App() {
 
   function doSubmitPrompt(prompt: string) {
     setSubmittedPrompt(prompt);
+    setListPurchaseContext(null);
     setView("results"); // conversation view — no separate processing screen
 
     if (prompt.trim() === "123") return;
@@ -209,7 +230,11 @@ export default function App() {
             onDismissCreditCoach={() => setCreditCoachSeen(true)}
             onBack={() => setView("landing")}
             onHistory={() => setHistoryOpen(true)}
-            onPurchase={() => setView("purchase")}
+            onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}
+            onBuyCredits={() => {
+              setListPurchaseContext(null);
+              setView("purchase");
+            }}
             onPlans={() => openPlans("results")}
             onSave={handleSaveList}
             onFeedback={handleFeedback}
@@ -218,7 +243,7 @@ export default function App() {
         );
 
       case "manual-search":
-        return <ManualSearchView onBack={() => setView("landing")} />;
+        return <ManualSearchView onBack={() => setView("landing")} onPlans={() => openPlans("manual-search")} />;
 
       case "saved-lists":
         return (
@@ -228,9 +253,10 @@ export default function App() {
       case "purchase":
         return (
           <PurchaseView
-            listName={submittedPrompt.slice(0, 30)}
+            listName={listPurchaseContext?.listName ?? submittedPrompt.slice(0, 30)}
             isFreemium={isFree}
-            onBack={() => setView("results")}
+            purchaseContext={listPurchaseContext}
+            onBack={() => setView(listPurchaseContext ? "plans" : "results")}
             onComplete={() => setView("purchase-success")}
           />
         );
@@ -246,13 +272,18 @@ export default function App() {
       case "plans":
         return (
           <PlansView
+            purchaseContext={listPurchaseContext}
             onBack={() => setView(plansReturnView === "subscription-checkout" ? "landing" : plansReturnView)}
             onSelectPlan={(planId, billing) => {
               setSelectedPlan(planId);
               setSelectedBilling(billing);
               setView("subscription-checkout");
             }}
-            onSearchLeads={() => setView("landing")}
+            onSearchLeads={() => {
+              setListPurchaseContext(null);
+              setView("landing");
+            }}
+            onBuyListCheckout={() => setView("purchase")}
           />
         );
 
