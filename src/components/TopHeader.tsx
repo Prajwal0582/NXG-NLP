@@ -86,19 +86,39 @@ export default function TopHeader({
           </button>
 
           {pillOpen && (
-            <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-xl border border-[#e4e7ec] shadow-lg z-50 p-4 animate-fade-in">
-              <p className="text-sm font-semibold text-[#1d2939] mb-1">Your Free AI Prompts</p>
-              <p className="text-sm text-[#475467] mb-1">
-                <span className="font-semibold text-[#1d2939]">{promptsRemaining}</span> of {freePromptsTotal} free prompts remaining.
+            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-[#e4e7ec] shadow-lg z-50 p-5 animate-fade-in">
+              <div className="flex items-center gap-2 mb-3">
+                <p className="text-sm font-semibold text-[#1d2939]">AI Prompt Allowance</p>
+                <span className="bg-[#f0f9ff] text-[#016dee] text-[11px] font-semibold px-2 py-0.5 rounded-full border border-[#bae6fd]">
+                  Freemium
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm text-[#475467]">Prompts used</span>
+                <span className="text-sm font-semibold text-[#1d2939]">{freePromptsTotal - promptsRemaining} of {freePromptsTotal}</span>
+              </div>
+              <div className="w-full h-2 bg-[#e4e7ec] rounded-full overflow-hidden mb-3">
+                <div
+                  className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#38bdf8]"}`}
+                  style={{ width: `${100 - pct}%` }}
+                />
+              </div>
+
+              <p className="text-xs text-[#667085] mb-4">
+                You get <span className="font-medium text-[#344054]">{freePromptsTotal} free AI prompts</span> each month.
+                {promptsRemaining <= 0
+                  ? " You've used all your free prompts this month."
+                  : ` You have ${promptsRemaining} remaining.`}
               </p>
-              <p className="text-xs text-[#667085] mb-3">Your {freePromptsTotal} free prompts reset automatically each month.</p>
+
               <button
                 onClick={() => { setPillOpen(false); onPlans(); }}
-                className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-xs font-semibold py-2 px-4 rounded-lg transition-colors"
+                className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors"
               >
                 Upgrade account
               </button>
-              <p className="text-center text-xs text-[#667085] mt-2">Upgrade for unlimited AI search access.</p>
+              <p className="text-center text-[11px] text-[#667085] mt-2">Get unlimited prompts & premium features</p>
             </div>
           )}
         </div>

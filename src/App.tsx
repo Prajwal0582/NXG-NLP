@@ -169,8 +169,8 @@ export default function App() {
     setToast({ message: "List saved to Business Saved Lists.", type: "success" });
   }
 
-  function handleFeedback(positive: boolean) {
-    if (!positive) setFeedbackModalOpen(true);
+  function handleFeedback(_positive: boolean) {
+    // Feedback is now handled inline in ResultsView — no modal needed
   }
 
   // ResultsView manages its own turns — this only deducts credits/prompts

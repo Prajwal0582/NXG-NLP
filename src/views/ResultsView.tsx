@@ -498,19 +498,120 @@ function ActionBanner({ totalLeads, onSave, onPurchaseList }: {
   );
 }
 
-// ─── Feedback row ─────────────────────────────────────────────────────────────
+// ─── Feedback row (inline) ───────────────────────────────────────────────────
+
+const FEEDBACK_CATEGORIES = [
+  "Wrong or irrelevant leads",
+  "Filters not applied correctly",
+  "Lead count looks off",
+  "Insights not useful",
+  "Too slow",
+  "Other",
+];
 
 function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }) {
   const [thumbsUp, setThumbsUp] = useState<boolean | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleThumbsDown() {
+    setThumbsUp(false);
+    setFormOpen(true);
+  }
+
+  function toggleChip(chip: string) {
+    setSelectedChips((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
+    );
+  }
+
+  function handleSubmit() {
+    setSubmitted(true);
+    onFeedback(false);
+    setTimeout(() => {
+      setFormOpen(false);
+    }, 2000);
+  }
+
+  function handleCancel() {
+    setFormOpen(false);
+    setThumbsUp(null);
+    setSelectedChips([]);
+    setComment("");
+  }
+
   return (
-    <div className="flex items-center gap-3 py-4 border-t border-[#f2f4f7] mt-4">
-      <span className="text-sm text-[#475467]">Is this useful?</span>
-      <button onClick={() => { setThumbsUp(true); onFeedback(true); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === true ? "text-[#016dee]" : "text-[#98a2b3]"}`}>
-        <svg viewBox="0 0 18 18" fill={thumbsUp === true ? "#016dee" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M5 9V15H3V9h2zm1-1l3-6h.5a1.5 1.5 0 011.5 1.5v2.5h4a1.5 1.5 0 011.5 1.5L16 13a1.5 1.5 0 01-1.5 1.5H6V8z" strokeLinejoin="round" /></svg>
-      </button>
-      <button onClick={() => { setThumbsUp(false); onFeedback(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === false ? "text-[#e11d48]" : "text-[#98a2b3]"}`}>
-        <svg viewBox="0 0 18 18" fill={thumbsUp === false ? "#e11d48" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M13 9V3h2v6h-2zm-1 1l-3 6H8.5A1.5 1.5 0 017 14.5v-2.5H3A1.5 1.5 0 011.5 10.5L2 5A1.5 1.5 0 013.5 3.5H12V10z" strokeLinejoin="round" /></svg>
-      </button>
+    <div className="mt-4">
+      <div className="flex items-center gap-3 py-4 border-t border-[#f2f4f7]">
+        <span className="text-sm text-[#475467]">Is this useful?</span>
+        <button onClick={() => { setThumbsUp(true); onFeedback(true); setFormOpen(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === true ? "text-[#016dee]" : "text-[#98a2b3]"}`}>
+          <svg viewBox="0 0 18 18" fill={thumbsUp === true ? "#016dee" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M5 9V15H3V9h2zm1-1l3-6h.5a1.5 1.5 0 011.5 1.5v2.5h4a1.5 1.5 0 011.5 1.5L16 13a1.5 1.5 0 01-1.5 1.5H6V8z" strokeLinejoin="round" /></svg>
+        </button>
+        <button onClick={handleThumbsDown} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === false ? "text-[#e11d48]" : "text-[#98a2b3]"}`}>
+          <svg viewBox="0 0 18 18" fill={thumbsUp === false ? "#e11d48" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M13 9V3h2v6h-2zm-1 1l-3 6H8.5A1.5 1.5 0 017 14.5v-2.5H3A1.5 1.5 0 011.5 10.5L2 5A1.5 1.5 0 013.5 3.5H12V10z" strokeLinejoin="round" /></svg>
+        </button>
+      </div>
+
+      {formOpen && (
+        <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-5 py-5 mb-4 animate-fade-in">
+          {submitted ? (
+            <div className="flex items-center gap-2 py-3">
+              <div className="size-5 bg-[#f6fef9] rounded-full flex items-center justify-center">
+                <svg viewBox="0 0 16 16" fill="none" className="size-3.5 text-[#067647]" stroke="currentColor" strokeWidth="2"><path d="M3 8l3.5 3.5L13 5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </div>
+              <span className="text-sm font-medium text-[#1d2939]">Thank you for your feedback!</span>
+            </div>
+          ) : (
+            <>
+              <h4 className="text-sm font-semibold text-[#1d2939] mb-1">What went wrong with this response?</h4>
+              <p className="text-xs text-[#667085] mb-4 leading-relaxed">
+                Your feedback, this prompt and the response are shared with our Product Support team to improve Smart Search.
+              </p>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                {FEEDBACK_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => toggleChip(cat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      selectedChips.includes(cat)
+                        ? "bg-[#008dc3] text-white border-[#008dc3]"
+                        : "bg-white text-[#344054] border-[#d0d5dd] hover:border-[#98a2b3]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Additional details (optional)"
+                className="w-full h-[80px] bg-white border border-[#eaecf0] rounded-lg px-3 py-2.5 text-sm text-[#1d2939] placeholder:text-[#98a2b3] focus:outline-none focus:border-[#008dc3] focus:ring-1 focus:ring-[#008dc3] resize-none mb-4"
+              />
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={selectedChips.length === 0}
+                  className="px-5 py-2 bg-[#008dc3] text-white text-sm font-medium rounded-lg hover:bg-[#007aab] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Submit feedback
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-sm font-medium text-[#475467] hover:text-[#1d2939] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }

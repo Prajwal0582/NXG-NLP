@@ -36,8 +36,13 @@ export default function SaveListModal({ defaultName, onConfirm, onCancel }: Save
 
         {/* Title */}
         <h2 className="text-[20px] font-medium leading-[30px] text-[#1d2939] text-center">
-          Save as new list
+          Save to My Lists
         </h2>
+
+        {/* Description */}
+        <p className="text-sm text-[#475467] text-center -mt-2">
+          {"Choose where to save this list. You'll be taken there once saved."}
+        </p>
 
         {/* Saving to path */}
         <div className="flex items-center gap-1.5 text-[14px] text-[#475467]">
@@ -64,7 +69,7 @@ export default function SaveListModal({ defaultName, onConfirm, onCancel }: Save
             onClick={handleConfirm}
             className="flex-1 bg-[#008dc3] border border-[#008dc3] text-white text-[18px] font-medium leading-[28px] py-3.5 rounded-lg hover:bg-[#007aab] transition-colors"
           >
-            Confirm
+            Save & Go to List
           </button>
           <button
             onClick={onCancel}
