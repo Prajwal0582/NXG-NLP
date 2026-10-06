@@ -23,7 +23,7 @@ function LightningIcon({ className = "size-3", fill = "#008dc3" }: { className?:
 
 function SparklePair() {
   return (
-    <svg viewBox="0 0 20 20" fill="none" className="size-5 shrink-0 text-g-blue-600">
+    <svg viewBox="0 0 20 20" fill="none" className="size-4 shrink-0 text-g-blue-600">
       <path
         d="M7.5 2.5c0 0 1.05 3.4 2.7 4.55C11.85 8.2 12.5 8.5 12.5 8.5s-.65.3-2.3 1.45C8.55 11.1 7.5 14.5 7.5 14.5s-1.05-3.4-2.7-4.55C3.15 8.8 2.5 8.5 2.5 8.5s.65-.3 2.3-1.45C6.45 5.9 7.5 2.5 7.5 2.5Z"
         fill="currentColor"
@@ -101,48 +101,48 @@ export default function TopHeader({
         </button>
 
         {pillOpen && (
-          <div className="absolute right-0 top-full mt-2 w-[360px] bg-g-white rounded-xl border border-g-gray-200 shadow-[0px_4px_8px_-2px_rgba(16,24,40,0.1),0px_2px_4px_-2px_rgba(16,24,40,0.06)] z-50 p-5 animate-fade-in">
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <p className="text-[16px] font-semibold leading-6 text-g-gray-800">
+          <div className="absolute right-0 top-full mt-2 w-[358px] bg-g-white rounded-xl border border-g-gray-200 shadow-[0px_4px_8px_-2px_rgba(16,24,40,0.1),0px_2px_4px_-2px_rgba(16,24,40,0.06)] z-50 p-4 animate-fade-in">
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <p className="text-[14px] font-semibold leading-5 text-g-gray-800">
                 AI Prompt Allowance
               </p>
-              <span className="shrink-0 rounded-full bg-g-blue-50 px-2.5 py-0.5 text-[12px] font-medium leading-[18px] text-g-blue-700">
+              <span className="shrink-0 rounded-full bg-g-blue-50 px-2 py-0.5 text-[12px] font-medium leading-[18px] text-g-blue-700">
                 {isFreemium ? "Free account" : "Subscriber"}
               </span>
             </div>
 
             {isFreemium ? (
               <>
-                <p className="text-[20px] font-semibold leading-[30px] text-g-gray-800">
+                <p className="text-[16px] font-semibold leading-6 text-g-gray-800">
                   {promptsRemaining} of {freePromptsTotal} free prompts remaining
                 </p>
-                <p className="mt-1 text-[14px] font-normal leading-5 text-g-gray-600">
+                <p className="mt-0.5 text-[12px] font-normal leading-[18px] text-g-gray-600">
                   Use your free prompts to explore and find leads with AI.
                 </p>
-                <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-g-blue-50 px-3.5 py-3">
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-g-blue-50 px-3 py-2">
                   <SparklePair />
-                  <p className="text-[14px] font-normal leading-5 text-g-gray-800">
+                  <p className="text-[12px] font-normal leading-[18px] text-g-gray-800">
                     Upgrade for unlimited AI prompts and full access.
                   </p>
                 </div>
                 <button
                   onClick={() => { setPillOpen(false); onPlans(); }}
-                  className="mt-4 w-full rounded-lg bg-g-blue-600 py-2.5 text-[16px] font-semibold leading-6 text-g-white hover:bg-g-blue-700 transition-colors"
+                  className="mt-2 w-full rounded-md bg-g-blue-600 py-1.5 text-[14px] font-medium leading-5 text-g-white hover:bg-g-blue-700 transition-colors"
                 >
                   Upgrade account
                 </button>
               </>
             ) : (
               <>
-                <p className="text-[20px] font-semibold leading-[30px] text-g-gray-800">
+                <p className="text-[16px] font-semibold leading-6 text-g-gray-800">
                   {promptsRemaining} of {freePromptsTotal} free prompts remaining
                 </p>
-                <p className="mt-1 text-[14px] font-normal leading-5 text-g-gray-600">
+                <p className="mt-0.5 text-[12px] font-normal leading-[18px] text-g-gray-600">
                   Use your free prompts to explore and find leads with AI.
                 </p>
-                <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-g-blue-50 px-3.5 py-3">
+                <div className="mt-2 flex items-center gap-2 rounded-lg bg-g-blue-50 px-3 py-2">
                   <SparklePair />
-                  <p className="text-[14px] font-normal leading-5 text-g-gray-800">
+                  <p className="text-[12px] font-normal leading-[18px] text-g-gray-800">
                     After this allowance, each AI search costs 2 credits.
                   </p>
                 </div>
