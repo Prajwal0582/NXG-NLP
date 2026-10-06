@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { createPortal } from "react-dom";
 import LeadTable from "../components/LeadTable";
 import type { UserScenario } from "../types";
 import {
@@ -61,6 +62,7 @@ interface ResultsViewProps {
   showCreditCoach: boolean;
   onDismissCreditCoach: () => void;
   onBack: () => void;
+  onNewChat: () => void;
   onHistory: () => void;
   onPurchaseList: (resultCount: number) => void;
   onBuyCredits: () => void;
@@ -68,6 +70,7 @@ interface ResultsViewProps {
   onSave: () => void;
   onFeedback: (positive: boolean) => void;
   onFollowUp: (p: string) => void;
+  skipAnimation?: boolean;
 }
 
 // ─── Processing steps ────────────────────────────────────────────────────────
@@ -95,15 +98,6 @@ function SparkleIcon({ size = "size-4" }: { size?: string }) {
   );
 }
 
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-4" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="22" />
-    </svg>
-  );
-}
 
 function LightningIcon({ className = "size-3" }: { className?: string }) {
   return (
@@ -509,44 +503,124 @@ const FEEDBACK_CATEGORIES = [
   "Other",
 ];
 
-function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }) {
-  const [thumbsUp, setThumbsUp] = useState<boolean | null>(null);
-  const [formOpen, setFormOpen] = useState(false);
-  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+function FeedbackModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: () => void }) {
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const [comment, setComment] = useState("");
-  const [submitted, setSubmitted] = useState(false);
 
-  function handleThumbsDown() {
-    setThumbsUp(false);
-    setFormOpen(true);
-  }
-
-  function toggleChip(chip: string) {
-    setSelectedChips((prev) =>
-      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
+  function toggleCategory(cat: string) {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
     );
   }
 
-  function handleSubmit() {
-    setSubmitted(true);
-    onFeedback(false);
-    setTimeout(() => {
-      setFormOpen(false);
-    }, 2000);
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 animate-fade-in">
+      <div className="relative w-[480px] bg-white rounded-2xl shadow-[0px_20px_24px_-4px_rgba(16,24,40,0.08),0px_8px_8px_-4px_rgba(16,24,40,0.03)] p-8">
+        {/* Close button */}
+        <button onClick={onClose} className="absolute top-4 right-4 p-1 text-[#98a2b3] hover:text-[#475467] transition-colors">
+          <svg viewBox="0 0 16 16" fill="none" className="size-5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+            <path d="M4 4l8 8M12 4l-8 8" />
+          </svg>
+        </button>
+
+        {/* Sad face icon */}
+        <div className="flex justify-center mb-5">
+          <div className="size-12 rounded-full bg-[#fef3f2] border-[6px] border-[#fef3f2] flex items-center justify-center">
+            <svg viewBox="0 0 24 24" fill="none" className="size-6">
+              <circle cx="12" cy="12" r="10" stroke="#f04438" strokeWidth="1.5" />
+              <circle cx="9" cy="10" r="1" fill="#f04438" />
+              <circle cx="15" cy="10" r="1" fill="#f04438" />
+              <path d="M8.5 16c.8-1.2 2-2 3.5-2s2.7.8 3.5 2" stroke="#f04438" strokeWidth="1.5" strokeLinecap="round" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Title */}
+        <h3 className="text-lg font-semibold text-[#101828] text-center mb-2">Help us Improve your Experience</h3>
+        <p className="text-sm text-[#475467] text-center mb-6 leading-relaxed">
+          Your feedback, this prompt and the response are shared with our Product Support team to improve Smart Search.
+        </p>
+
+        {/* Checkboxes */}
+        <div className="flex flex-col gap-4 mb-6">
+          {FEEDBACK_CATEGORIES.map((cat) => (
+            <label key={cat} className="flex items-center gap-3 cursor-pointer group">
+              <div className="relative flex items-center justify-center">
+                <input
+                  type="checkbox"
+                  checked={selectedCategories.includes(cat)}
+                  onChange={() => toggleCategory(cat)}
+                  className="peer sr-only"
+                />
+                <div className={`size-5 rounded border-[1.5px] transition-colors flex items-center justify-center ${
+                  selectedCategories.includes(cat)
+                    ? "bg-[#008dc3] border-[#008dc3]"
+                    : "border-[#d0d5dd] bg-white group-hover:border-[#98a2b3]"
+                }`}>
+                  {selectedCategories.includes(cat) && (
+                    <svg viewBox="0 0 12 12" fill="none" className="size-3">
+                      <path d="M2.5 6l2.5 2.5 4.5-5" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  )}
+                </div>
+              </div>
+              <span className="text-sm text-[#344054]">{cat}</span>
+            </label>
+          ))}
+        </div>
+
+        {/* Textarea */}
+        <textarea
+          value={comment}
+          onChange={(e) => setComment(e.target.value)}
+          placeholder="Tell us more"
+          className="w-full h-[100px] bg-white border border-[#d0d5dd] rounded-lg px-3.5 py-3 text-sm text-[#1d2939] placeholder:text-[#667085] focus:outline-none focus:border-[#008dc3] focus:ring-1 focus:ring-[#008dc3] resize-none mb-6"
+        />
+
+        {/* Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={onSubmit}
+            className="flex-1 py-2.5 bg-[#008dc3] text-white text-base font-semibold rounded-lg hover:bg-[#007aab] transition-colors"
+          >
+            Submit
+          </button>
+          <button
+            onClick={onClose}
+            className="flex-1 py-2.5 bg-white text-[#344054] text-base font-semibold rounded-lg border border-[#d0d5dd] hover:bg-[#f9fafb] transition-colors"
+          >
+            Skip
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }) {
+  const [thumbsUp, setThumbsUp] = useState<boolean | null>(null);
+  const [modalOpen, setModalOpen] = useState(false);
+
+  function handleThumbsDown() {
+    setThumbsUp(false);
+    setModalOpen(true);
   }
 
-  function handleCancel() {
-    setFormOpen(false);
+  function handleSubmit() {
+    setModalOpen(false);
+    onFeedback(false);
+  }
+
+  function handleClose() {
+    setModalOpen(false);
     setThumbsUp(null);
-    setSelectedChips([]);
-    setComment("");
   }
 
   return (
     <div className="mt-4">
       <div className="flex items-center gap-3 py-4 border-t border-[#f2f4f7]">
         <span className="text-sm text-[#475467]">Is this useful?</span>
-        <button onClick={() => { setThumbsUp(true); onFeedback(true); setFormOpen(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === true ? "text-[#016dee]" : "text-[#98a2b3]"}`}>
+        <button onClick={() => { setThumbsUp(true); onFeedback(true); setModalOpen(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === true ? "text-[#016dee]" : "text-[#98a2b3]"}`}>
           <svg viewBox="0 0 18 18" fill={thumbsUp === true ? "#016dee" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M5 9V15H3V9h2zm1-1l3-6h.5a1.5 1.5 0 011.5 1.5v2.5h4a1.5 1.5 0 011.5 1.5L16 13a1.5 1.5 0 01-1.5 1.5H6V8z" strokeLinejoin="round" /></svg>
         </button>
         <button onClick={handleThumbsDown} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === false ? "text-[#e11d48]" : "text-[#98a2b3]"}`}>
@@ -554,64 +628,7 @@ function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }
         </button>
       </div>
 
-      {formOpen && (
-        <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-5 py-5 mb-4 animate-fade-in">
-          {submitted ? (
-            <div className="flex items-center gap-2 py-3">
-              <div className="size-5 bg-[#f6fef9] rounded-full flex items-center justify-center">
-                <svg viewBox="0 0 16 16" fill="none" className="size-3.5 text-[#067647]" stroke="currentColor" strokeWidth="2"><path d="M3 8l3.5 3.5L13 5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-              </div>
-              <span className="text-sm font-medium text-[#1d2939]">Thank you for your feedback!</span>
-            </div>
-          ) : (
-            <>
-              <h4 className="text-sm font-semibold text-[#1d2939] mb-1">What went wrong with this response?</h4>
-              <p className="text-xs text-[#667085] mb-4 leading-relaxed">
-                Your feedback, this prompt and the response are shared with our Product Support team to improve Smart Search.
-              </p>
-
-              <div className="flex flex-wrap gap-2 mb-4">
-                {FEEDBACK_CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => toggleChip(cat)}
-                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                      selectedChips.includes(cat)
-                        ? "bg-[#008dc3] text-white border-[#008dc3]"
-                        : "bg-white text-[#344054] border-[#d0d5dd] hover:border-[#98a2b3]"
-                    }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
-
-              <textarea
-                value={comment}
-                onChange={(e) => setComment(e.target.value)}
-                placeholder="Additional details (optional)"
-                className="w-full h-[80px] bg-white border border-[#eaecf0] rounded-lg px-3 py-2.5 text-sm text-[#1d2939] placeholder:text-[#98a2b3] focus:outline-none focus:border-[#008dc3] focus:ring-1 focus:ring-[#008dc3] resize-none mb-4"
-              />
-
-              <div className="flex items-center gap-3">
-                <button
-                  onClick={handleSubmit}
-                  disabled={selectedChips.length === 0}
-                  className="px-5 py-2 bg-[#008dc3] text-white text-sm font-medium rounded-lg hover:bg-[#007aab] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Submit feedback
-                </button>
-                <button
-                  onClick={handleCancel}
-                  className="px-4 py-2 text-sm font-medium text-[#475467] hover:text-[#1d2939] transition-colors"
-                >
-                  Cancel
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
+      {modalOpen && createPortal(<FeedbackModal onClose={handleClose} onSubmit={handleSubmit} />, document.body)}
     </div>
   );
 }
@@ -796,6 +813,7 @@ export default function ResultsView({
   showCreditCoach,
   onDismissCreditCoach,
   onBack,
+  onNewChat,
   onHistory,
   onPurchaseList,
   onBuyCredits,
@@ -803,6 +821,7 @@ export default function ResultsView({
   onSave,
   onFeedback,
   onFollowUp,
+  skipAnimation,
 }: ResultsViewProps) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [followUpInput, setFollowUpInput] = useState("");
@@ -811,6 +830,7 @@ export default function ResultsView({
 
   const nextId = useRef(0);
   const booted = useRef(false);
+  const prevPrompt = useRef(prompt);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
@@ -940,14 +960,39 @@ export default function ResultsView({
     }, 3500);
   }, [searchScenario]);
 
+  const addTurnInstant = useCallback((p: string) => {
+    const id = nextId.current++;
+    const sc = resolveScenario(p);
+    const snapshot = buildInitialPayload(sc);
+    setTurns([{ id, prompt: p, stepStatuses: ["done", "done", "done"] as StepStatus[], isComplete: true, frozen: false, resultSnapshot: snapshot }]);
+  }, []);
+
   // Boot first turn from the prompt prop — guard against Strict Mode double-invoke.
   // If the user is already out of prompts (freemium-0), the turn is frozen: the
   // system does not generate data because the prompt limit is finished.
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
-    addTurn(prompt, isExhausted, prompt.trim() === "123");
+    if (skipAnimation) {
+      addTurnInstant(prompt);
+    } else {
+      addTurn(prompt, isExhausted, prompt.trim() === "123");
+    }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When prompt changes after initial boot (e.g. history selection), reset and load instantly
+  useEffect(() => {
+    if (prompt === prevPrompt.current) return;
+    prevPrompt.current = prompt;
+    if (!booted.current) return;
+    nextId.current = 0;
+    if (skipAnimation) {
+      addTurnInstant(prompt);
+    } else {
+      setTurns([]);
+      addTurn(prompt, isExhausted, prompt.trim() === "123");
+    }
+  }, [prompt, skipAnimation]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Scroll to bottom when a new turn is added or completes
   const completedCount = turns.filter(t => t.isComplete).length;
@@ -1012,15 +1057,21 @@ export default function ResultsView({
               {prompt && <p className="text-xs text-[#667085] mt-0.5">{prompt.length > 70 ? prompt.slice(0, 70) + "…" : prompt}</p>}
             </div>
           </div>
-          <button onClick={onHistory} className="flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">
-            <svg viewBox="0 0 16 16" fill="none" className="size-4 text-[#475467]" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6.5" /><path d="M8 5v3.5l2 2" strokeLinecap="round" /></svg>
-            History
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={onNewChat} className="flex items-center gap-1.5 px-3.5 py-1.5 text-sm font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">
+              <svg viewBox="0 0 16 16" fill="none" className="size-4 text-[#475467]" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"><path d="M8 3v10M3 8h10" /></svg>
+              New chat
+            </button>
+            <button onClick={onHistory} className="flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">
+              <svg viewBox="0 0 16 16" fill="none" className="size-4 text-[#475467]" stroke="currentColor" strokeWidth="1.5"><circle cx="8" cy="8" r="6.5" /><path d="M8 5v3.5l2 2" strokeLinecap="round" /></svg>
+              History
+            </button>
+          </div>
         </div>
       </div>
 
       {/* ── Scrollable conversation ───────────────────────────────────────── */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto overflow-x-hidden">
         <div className="max-w-[1150px] mx-auto px-4 py-8">
 
           {turns.map((turn, i) => {
@@ -1031,13 +1082,12 @@ export default function ResultsView({
                 <UserBubble prompt={turn.prompt} />
 
                 {turn.invalid && turn.isComplete ? (
-                  <div className="mt-3 flex items-start gap-3">
-                    <div className="size-7 rounded-full bg-gradient-to-br from-[#60a5fa] to-[#c084fc] flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="white" strokeWidth="1.5"><path d="M7 1v5l3 2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="7" r="5.5" /></svg>
+                  <div className="animate-fade-in mt-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <SparkleIcon />
+                      <span className="text-sm font-semibold text-[#1d2939]">SignalFuse</span>
                     </div>
-                    <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-4 py-3">
-                      <p className="text-sm text-[#475467]">Seems like <strong>invalid input</strong>. I can currently help only with finding leads for you.</p>
-                    </div>
+                    <p className="text-sm text-[#475467] leading-relaxed">I can currently help only with finding leads for you.</p>
                   </div>
                 ) : !turn.isComplete ? (
                   <InlineProcessingBlock
@@ -1101,17 +1151,20 @@ export default function ResultsView({
             </div>
           )}
 
-          {/* Freemium low-balance / exhausted inline alert */}
+          {/* Freemium low-balance inline alert */}
           {isLowPrompt && !isExhausted && (
-            <div className="flex items-center gap-2 bg-[#fffaeb] border border-[#fedf89] rounded-lg px-3.5 py-2 mb-2">
-              <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
-                <circle cx="8" cy="8" r="6.5" />
-                <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
-              </svg>
-              <p className="text-xs text-[#b54708]">
-                {promptsRemaining} free prompts remaining. For unlimited feature access -{" "}
-                <button onClick={onPlans} className="underline font-medium hover:text-[#93370d] transition-colors">Upgrade now</button>
-              </p>
+            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
+              <div className="flex flex-col gap-0.5">
+                <div className="flex items-center gap-2">
+                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
+                    <circle cx="8" cy="8" r="6.5" />
+                    <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                  </svg>
+                  <p className="text-sm font-semibold text-[#b54708]">{promptsRemaining} free prompts remaining.</p>
+                </div>
+                <p className="text-sm text-[#b54708] ml-6">Upgrade for unlimited access to this feature.</p>
+              </div>
+              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
             </div>
           )}
 
@@ -1126,7 +1179,7 @@ export default function ResultsView({
                   </svg>
                   <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your {freePromptsTotal} free prompts renew on September 1, 2026. Upgrade for unlimited access to this feature.</p>
+                <p className="text-sm text-[#b54708] ml-6">Upgrade for unlimited access to this feature.</p>
               </div>
               <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
             </div>
@@ -1150,17 +1203,17 @@ export default function ResultsView({
           )}
 
           {/* Composer — stays visible; send locks once the free prompt is spent */}
-          <div className="rounded-xl p-px bg-gradient-to-r from-[#c084fc] via-[#60a5fa] to-[#22d3ee]">
-            <div className="bg-white rounded-[11px] flex items-center px-4 py-2.5 gap-3">
+          <div className={`rounded-xl p-px ${sendLocked ? "bg-[#e4e7ec]" : "bg-gradient-to-r from-[#c084fc] via-[#60a5fa] to-[#22d3ee]"}`}>
+            <div className={`rounded-[11px] flex items-center px-4 py-2.5 gap-3 ${sendLocked ? "bg-[#f9fafb]" : "bg-white"}`}>
               <input
                 value={followUpInput}
                 onChange={e => setFollowUpInput(e.target.value)}
                 onKeyDown={handleKey}
-                placeholder="Ask me to refine, expand or narrow your lead list…"
-                className="flex-1 text-sm text-[#1d2939] bg-transparent border-none outline-none placeholder:text-[#9ca3af]"
+                disabled={sendLocked}
+                placeholder={sendLocked ? "Upgrade to continue using Smart Search" : "Ask me to refine, expand or narrow your lead list…"}
+                className={`flex-1 text-sm bg-transparent border-none outline-none placeholder:text-[#9ca3af] ${sendLocked ? "text-[#98a2b3] cursor-not-allowed" : "text-[#1d2939]"}`}
               />
-              <div className="flex items-center gap-1.5 shrink-0">
-                <button className="size-8 flex items-center justify-center rounded-lg border border-[#e4e7ec] bg-white hover:bg-[#f9fafb] transition-colors" tabIndex={-1}><MicIcon /></button>
+              <div className="flex items-center shrink-0">
                 <button
                   onClick={() => followUpInput.trim() && interceptSubmit(followUpInput.trim())}
                   disabled={sendDisabled}

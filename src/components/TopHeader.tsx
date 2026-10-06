@@ -69,56 +69,68 @@ export default function TopHeader({
         <div ref={pillRef} className="relative mr-3">
           <button
             onClick={() => { setPillOpen((o) => !o); setAvatarOpen(false); }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-[12px] font-normal leading-[18px] border transition-colors ${
               isLow
                 ? "bg-[#fffaeb] border-[#fedf89] text-[#b54708] hover:bg-[#fef3c7]"
-                : "bg-[#f0f9ff] border-[#bae6fd] text-[#344054] hover:bg-[#e0f2fe]"
+                : "bg-[#f1f9fd] border-[#cae6f9] text-[#344054] hover:bg-[#e0f2fe]"
             }`}
           >
-            <LightningIcon fill={isLow ? "#f79009" : "#016dee"} />
-            <span>{promptsRemaining} of {freePromptsTotal} free prompts left</span>
-            <div className="w-14 h-1.5 bg-[#e4e7ec] rounded-full overflow-hidden ml-1">
+            <span>Free prompts: {promptsRemaining} of {freePromptsTotal}</span>
+            <div className="w-16 h-1.5 bg-[#e4e7ec] rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#38bdf8]"}`}
+                className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#008dc3]"}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
           </button>
 
           {pillOpen && (
-            <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl border border-[#e4e7ec] shadow-lg z-50 p-5 animate-fade-in">
-              <div className="flex items-center gap-2 mb-3">
-                <p className="text-sm font-semibold text-[#1d2939]">AI Prompt Allowance</p>
-                <span className="bg-[#f0f9ff] text-[#016dee] text-[11px] font-semibold px-2 py-0.5 rounded-full border border-[#bae6fd]">
-                  Freemium
-                </span>
+            <div className="absolute right-0 top-full mt-2 w-[358px] bg-white rounded-xl border border-[#eaecf0] shadow-[0px_0px_0px_rgba(71,84,103,0.04),0px_3px_7px_rgba(71,84,103,0.04),0px_12px_12px_rgba(71,84,103,0.03),0px_27px_16px_rgba(71,84,103,0.02),0px_49px_19px_rgba(71,84,103,0.01),0px_76px_21px_rgba(71,84,103,0)] z-50 p-4 animate-fade-in">
+              {/* Header row */}
+              <div className="flex items-center justify-between pb-2 border-b border-[#f1f5f9]">
+                <p className="text-xs font-medium leading-[18px] text-[#0f172b]">AI Prompt Allowance</p>
+                <p className="text-xs font-normal leading-[18px] text-[#62748e]">{isFreemium ? "Freemium" : "Subscribed"}</p>
               </div>
 
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm text-[#475467]">Prompts used</span>
-                <span className="text-sm font-semibold text-[#1d2939]">{freePromptsTotal - promptsRemaining} of {freePromptsTotal}</span>
-              </div>
-              <div className="w-full h-2 bg-[#e4e7ec] rounded-full overflow-hidden mb-3">
-                <div
-                  className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#38bdf8]"}`}
-                  style={{ width: `${100 - pct}%` }}
-                />
-              </div>
+              {/* Body */}
+              <div className="pt-3">
+                {isFreemium ? (
+                  <>
+                    <p className="text-xs font-medium leading-[18px] text-[#45556c]">
+                      You have{" "}
+                      <span className="font-semibold text-[#0f172b]">{freePromptsTotal} free prompts</span>
+                      {" "}to explore lead generation.
+                    </p>
 
-              <p className="text-xs text-[#667085] mb-4">
-                You get <span className="font-medium text-[#344054]">{freePromptsTotal} free AI prompts</span> each month.
-                {promptsRemaining <= 0
-                  ? " You've used all your free prompts this month."
-                  : ` You have ${promptsRemaining} remaining.`}
-              </p>
+                    <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
+                      <p className="text-xs font-normal leading-[18px] text-[#475467]">
+                        Upgrade to get more prompts and unlock full access.
+                      </p>
+                    </div>
 
-              <button
-                onClick={() => { setPillOpen(false); onPlans(); }}
-                className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors"
-              >
-                Upgrade account
-              </button>
-              <p className="text-center text-[11px] text-[#667085] mt-2">Get unlimited prompts & premium features</p>
+                    <button
+                      onClick={() => { setPillOpen(false); onPlans(); }}
+                      className="w-full mt-2 bg-[#008dc3] border border-[#008dc3] text-white text-[14px] font-medium leading-[20px] py-1.5 px-3 rounded-md hover:bg-[#007aab] transition-colors"
+                    >
+                      Upgrade account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-medium leading-[18px] text-[#45556c]">
+                      Your account will receive{" "}
+                      <span className="font-semibold text-[#0f172b]">{freePromptsTotal} initial free prompts</span>
+                      {" "}to explore lead generation.
+                    </p>
+
+                    <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
+                      <p className="text-xs font-normal leading-[18px] text-[#475467]">
+                        You are provided with free prompts once this are utilized your account credits will start to consume
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
             </div>
           )}
         </div>
@@ -139,33 +151,33 @@ export default function TopHeader({
         </button>
 
         {avatarOpen && (
-          <div className="absolute right-0 top-10 w-64 bg-white rounded-xl shadow-xl border border-[#eaecf0] z-50 animate-fade-in overflow-hidden">
-            {/* Profile identity */}
-            <div className="px-4 py-3 flex items-center gap-3">
-              <div className="size-9 rounded-full bg-[#d0d5dd] flex items-center justify-center text-sm font-semibold text-[#1d2939] shrink-0">
-                SM
+          <div className="absolute right-0 top-10 w-[271px] bg-white rounded-[10px] shadow-[0px_0px_0px_rgba(71,84,103,0.04),0px_1px_3px_rgba(71,84,103,0.04),0px_5px_5px_rgba(71,84,103,0.03),0px_11px_7px_rgba(71,84,103,0.02),0px_19px_8px_rgba(71,84,103,0.01),0px_30px_8px_rgba(71,84,103,0)] border border-[#eaecf0] z-50 animate-fade-in overflow-hidden">
+            {/* Account identity */}
+            <div className="flex items-center gap-3 px-4 h-[61px] border-b border-[#eaecf0]">
+              <div className="bg-[#d0d5dd] flex items-center justify-center p-2 rounded-full shrink-0">
+                <span className="text-[14px] font-normal leading-[21px] text-black">SM</span>
               </div>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-[#1d2939] truncate">Sarah Mitchell</p>
-                <p className="text-xs text-[#667085] truncate">sarah@company.com</p>
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <p className="text-[14px] font-medium leading-[20px] text-[#1d2939] truncate">Sarah Mitchell</p>
+                <p className="text-[12px] font-normal leading-[18px] text-[#667085] truncate">sarah@company.com</p>
               </div>
             </div>
 
-            {/* Account type + balance */}
-            <div className="px-4 py-2.5 bg-[#f9fafb] border-y border-[#eaecf0]">
-              <p className="text-xs text-[#475467] mb-1">{accountLabel(scenario)}</p>
+            {/* Subscription summary */}
+            <div className="flex flex-col gap-1 px-4 pt-[9px] pb-2 border-b border-[#eaecf0]">
+              <p className="text-[12px] font-normal leading-[18px] text-[#1d2939]">{accountLabel(scenario)}</p>
               {isCredit || (!isFreemium && promptsRemaining <= 0 && creditsRemaining > 0) ? (
                 <>
-                  <div className="flex items-center gap-1.5">
-                    <LightningIcon />
-                    <span className="text-xs font-semibold text-[#1d2939]">{creditsRemaining} credits available</span>
+                  <div className="flex items-center gap-1">
+                    <LightningIcon className="size-3.5" fill="#475467" />
+                    <span className="text-[14px] font-medium leading-[20px] text-[#1d2939]">{creditsRemaining} credits available</span>
                   </div>
-                  <p className="text-[11px] text-[#667085] mt-0.5">AI prompts cost 2 credits each.</p>
+                  <p className="text-[12px] font-normal leading-[18px] text-[#667085]">AI prompts cost 2 credits each</p>
                 </>
               ) : (
-                <div className="flex items-center gap-1.5">
-                  <LightningIcon />
-                  <span className="text-xs font-semibold text-[#1d2939]">
+                <div className="flex items-center gap-1">
+                  <LightningIcon className="size-3.5" fill="#475467" />
+                  <span className="text-[14px] font-medium leading-[20px] text-[#1d2939]">
                     {promptsRemaining} of {freePromptsTotal} free prompts left
                   </span>
                 </div>
@@ -173,17 +185,15 @@ export default function TopHeader({
             </div>
 
             {/* Log out */}
-            <div className="py-1">
-              <button
-                onClick={() => { setAvatarOpen(false); onLogout(); }}
-                className="w-full text-left px-4 py-2.5 text-sm text-[#344054] hover:bg-[#f9fafb] transition-colors flex items-center gap-2"
-              >
-                <svg viewBox="0 0 16 16" fill="none" className="size-4 text-[#667085]" stroke="currentColor" strokeWidth="1.5">
-                  <path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M10 11l3-3-3-3M13 8H6" strokeLinecap="round" strokeLinejoin="round" />
-                </svg>
-                Log out
-              </button>
-            </div>
+            <button
+              onClick={() => { setAvatarOpen(false); onLogout(); }}
+              className="w-full flex items-center gap-2 px-4 h-12 text-[14px] font-normal leading-[20px] text-[#1d2939] hover:bg-[#f9fafb] transition-colors"
+            >
+              <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#667085" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M6 14H3a1 1 0 01-1-1V3a1 1 0 011-1h3M10 11l3-3-3-3M13 8H6" />
+              </svg>
+              Log out
+            </button>
           </div>
         )}
       </div>

@@ -5,7 +5,8 @@
       "name": "nlp-prototype-2",
       "runtimeExecutable": "corepack",
       "runtimeArgs": ["pnpm", "dev"],
-      "port": 8443
+      "port": 5192,
+      "url": "http://localhost:5192"
     }
   ]
 }

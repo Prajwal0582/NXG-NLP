@@ -25,7 +25,7 @@ export interface ListPurchaseContext {
 }
 
 export type UserScenario =
-  | 'freemium-24'
+  | 'freemium-20'
   | 'freemium-5'
   | 'freemium-0'
   | 'subscriber-free'

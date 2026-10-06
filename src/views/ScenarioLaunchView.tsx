@@ -10,7 +10,7 @@ interface ScenarioCard {
 
 const CARDS: ScenarioCard[] = [
   {
-    id: "freemium-24",
+    id: "freemium-20",
     promptsOverride: 20,
     title: "New Freemium User",
     badge: "freemium",
@@ -24,7 +24,7 @@ const CARDS: ScenarioCard[] = [
     title: "Freemium — 5 Prompts Left",
     badge: "freemium",
     bullets: [
-      "5 free prompts remaining",
+      "5 of 20 free prompts remaining",
       "Obfuscated lead details",
       "Low-balance counter & upgrade nudge",
     ],
@@ -55,7 +55,7 @@ const CARDS: ScenarioCard[] = [
     title: "Existing Subscriber",
     badge: "subscriber",
     bullets: [
-      "5 free prompts available",
+      "5 of 20 free prompts available",
       "Full, unmasked lead details",
     ],
   },
@@ -64,7 +64,7 @@ const CARDS: ScenarioCard[] = [
     title: "Subscriber Using Credits",
     badge: "subscriber",
     bullets: [
-      "48 credits available",
+      "0 free prompts, 30 credits available",
       "2 credits per AI prompt",
       "Full, unmasked lead details",
     ],

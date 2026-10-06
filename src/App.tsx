@@ -9,7 +9,9 @@ import FeedbackModal from "./components/FeedbackModal";
 import CreditConfirmModal from "./components/CreditConfirmModal";
 import Toast from "./components/Toast";
 import SaveListModal from "./components/SaveListModal";
+import SaveListGuidance from "./components/SaveListGuidance";
 import CreditMilestoneModal from "./components/CreditMilestoneModal";
+import WelcomeModal from "./components/WelcomeModal";
 
 import ScenarioLaunchView from "./views/ScenarioLaunchView";
 import LandingView from "./views/LandingView";
@@ -23,10 +25,10 @@ import SubscriptionCheckoutView from "./views/SubscriptionCheckoutView";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
-    case "freemium-24": return 24;
+    case "freemium-20": return 20;
     case "freemium-5": return 5;
     case "freemium-0": return 0;
-    case "subscriber-free": return 10;
+    case "subscriber-free": return 20;
     case "subscriber-credit": return 0;
     case "subscriber-credit-0": return 0;
   }
@@ -50,12 +52,13 @@ function isFreemiumScenario(s: UserScenario) {
 }
 
 export default function App() {
-  const [scenario, setScenario] = useState<UserScenario>("freemium-24");
+  const [scenario, setScenario] = useState<UserScenario>("freemium-20");
   const [view, setView] = useState<View>("scenario-launch");
   const [activeTab, setActiveTab] = useState<ActiveTab>("business");
-  const [promptsRemaining, setPromptsRemaining] = useState(getInitialPrompts("freemium-24"));
-  const [creditsRemaining, setCreditsRemaining] = useState(getInitialCredits("freemium-24"));
+  const [promptsRemaining, setPromptsRemaining] = useState(getInitialPrompts("freemium-20"));
+  const [creditsRemaining, setCreditsRemaining] = useState(getInitialCredits("freemium-20"));
   const [submittedPrompt, setSubmittedPrompt] = useState("");
+  const [skipAnimation, setSkipAnimation] = useState(false);
   const [listSaved, setListSaved] = useState(false);
 
   const [historyOpen, setHistoryOpen] = useState(false);
@@ -66,9 +69,12 @@ export default function App() {
   // Credit-cost coach tip is shown once per session for subscriber-credit.
   const [creditCoachSeen, setCreditCoachSeen] = useState(false);
   const [saveListModalOpen, setSaveListModalOpen] = useState(false);
+  const [saveGuidanceOpen, setSaveGuidanceOpen] = useState(false);
+  const [saveGuidanceSeen, setSaveGuidanceSeen] = useState(false);
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
 
-  const [freeTotal, setFreeTotal] = useState(25);
+  const [freeTotal, setFreeTotal] = useState(20);
   const reservedCredits = getReservedCredits(scenario);
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlanId>("pro");
   const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>("monthly");
@@ -101,10 +107,12 @@ export default function App() {
     setScenario(s);
     const prompts = promptsOverride !== undefined ? promptsOverride : getInitialPrompts(s);
     setPromptsRemaining(prompts);
-    setFreeTotal(promptsOverride !== undefined ? promptsOverride : 20);
+    setFreeTotal(20);
     setCreditsRemaining(getInitialCredits(s));
     setListSaved(false);
     setListPurchaseContext(null);
+    const isNewUser = (s === "freemium-20" || s === "subscriber-free") && promptsOverride === 20;
+    setWelcomeModalOpen(isNewUser);
     setView("landing");
   }
 
@@ -112,8 +120,21 @@ export default function App() {
     applyScenario(s);
   }
 
+  const hasActiveChat = submittedPrompt.length > 0;
+
   function handleNavigate(v: View) {
+    if (v === "landing" && hasActiveChat) {
+      setView("results");
+      return;
+    }
     setView(v);
+  }
+
+  function handleNewChat() {
+    setSkipAnimation(false);
+    setSubmittedPrompt("");
+    setListPurchaseContext(null);
+    setView("landing");
   }
 
   function handleLogout() {
@@ -133,6 +154,7 @@ export default function App() {
   }
 
   function doSubmitPrompt(prompt: string) {
+    setSkipAnimation(false);
     setSubmittedPrompt(prompt);
     setListPurchaseContext(null);
     setView("results"); // conversation view — no separate processing screen
@@ -160,13 +182,20 @@ export default function App() {
   }
 
   function handleSaveList() {
-    setSaveListModalOpen(true);
+    if (!saveGuidanceSeen) {
+      setSaveGuidanceOpen(true);
+    } else {
+      setSaveListModalOpen(true);
+    }
   }
 
-  function confirmSaveList(_name: string) {
+  const [justSavedListName, setJustSavedListName] = useState<string | null>(null);
+
+  function confirmSaveList(name: string) {
     setSaveListModalOpen(false);
     setListSaved(true);
-    setToast({ message: "List saved to Business Saved Lists.", type: "success" });
+    setJustSavedListName(name);
+    setView("saved-lists");
   }
 
   function handleFeedback(_positive: boolean) {
@@ -218,36 +247,19 @@ export default function App() {
 
 
       case "results":
-        return (
-          <ResultsView
-            scenario={scenario}
-            prompt={submittedPrompt}
-            promptsRemaining={promptsRemaining}
-            freePromptsTotal={freeTotal}
-            creditsRemaining={creditsRemaining}
-            reservedCredits={reservedCredits}
-            showCreditCoach={false}
-            onDismissCreditCoach={() => setCreditCoachSeen(true)}
-            onBack={() => setView("landing")}
-            onHistory={() => setHistoryOpen(true)}
-            onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}
-            onBuyCredits={() => {
-              setListPurchaseContext(null);
-              setView("purchase");
-            }}
-            onPlans={() => openPlans("results")}
-            onSave={handleSaveList}
-            onFeedback={handleFeedback}
-            onFollowUp={handleFollowUp}
-          />
-        );
+        return null;
 
       case "manual-search":
         return <ManualSearchView onBack={() => setView("landing")} onPlans={() => openPlans("manual-search")} />;
 
       case "saved-lists":
         return (
-          <SavedListsView scenario={scenario} onStartAISearch={() => setView("landing")} />
+          <SavedListsView
+            scenario={scenario}
+            onStartAISearch={() => setView("landing")}
+            justSavedListName={justSavedListName}
+            onSaveComplete={() => setJustSavedListName(null)}
+          />
         );
 
       case "purchase":
@@ -326,6 +338,7 @@ export default function App() {
         onNavigate={handleNavigate}
         isSubscriber={!isFree}
         onPlans={() => openPlans("landing")}
+        hasActiveChat={hasActiveChat}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -340,8 +353,36 @@ export default function App() {
           onLogout={handleLogout}
           onPlans={() => openPlans("landing")}
         />
-        <div className="flex-1 overflow-hidden bg-white">
-          {renderContent()}
+        <div className="flex-1 overflow-hidden bg-white relative">
+          {/* ResultsView stays mounted to preserve chat state across tab switches */}
+          {hasActiveChat && (
+            <div className={`absolute inset-0 ${view === "results" ? "" : "hidden"}`}>
+              <ResultsView
+                scenario={scenario}
+                prompt={submittedPrompt}
+                promptsRemaining={promptsRemaining}
+                freePromptsTotal={freeTotal}
+                creditsRemaining={creditsRemaining}
+                reservedCredits={reservedCredits}
+                showCreditCoach={false}
+                onDismissCreditCoach={() => setCreditCoachSeen(true)}
+                onBack={() => setView("landing")}
+                onNewChat={handleNewChat}
+                onHistory={() => setHistoryOpen(true)}
+                onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}
+                onBuyCredits={() => {
+                  setListPurchaseContext(null);
+                  setView("purchase");
+                }}
+                onPlans={() => openPlans("results")}
+                onSave={handleSaveList}
+                onFeedback={handleFeedback}
+                onFollowUp={handleFollowUp}
+                skipAnimation={skipAnimation}
+              />
+            </div>
+          )}
+          {view !== "results" && renderContent()}
         </div>
       </div>
 
@@ -351,6 +392,7 @@ export default function App() {
           onClose={() => setHistoryOpen(false)}
           onSelectHistory={(prompt) => {
             setHistoryOpen(false);
+            setSkipAnimation(true);
             setSubmittedPrompt(prompt);
             setView("results");
           }}
@@ -378,9 +420,24 @@ export default function App() {
         />
       )}
 
+      {saveGuidanceOpen && (
+        <SaveListGuidance
+          activeTab={activeTab}
+          onComplete={() => {
+            setSaveGuidanceOpen(false);
+            setSaveGuidanceSeen(true);
+            setSaveListModalOpen(true);
+          }}
+          onDismiss={() => {
+            setSaveGuidanceOpen(false);
+            setSaveGuidanceSeen(true);
+          }}
+        />
+      )}
+
       {saveListModalOpen && (
         <SaveListModal
-          defaultName={submittedPrompt}
+          activeTab={activeTab}
           onConfirm={confirmSaveList}
           onCancel={() => setSaveListModalOpen(false)}
         />
@@ -391,6 +448,13 @@ export default function App() {
           freePromptsTotal={freeTotal}
           onContinue={() => setMilestoneModalOpen(false)}
           onViewBalance={() => setMilestoneModalOpen(false)}
+        />
+      )}
+
+      {welcomeModalOpen && (
+        <WelcomeModal
+          isSubscriber={!isFree}
+          onGetStarted={() => setWelcomeModalOpen(false)}
         />
       )}
 
