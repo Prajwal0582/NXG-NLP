@@ -145,6 +145,7 @@ export default function Sidebar({
   onNavigate,
   isSubscriber,
   onPlans,
+  hasActiveChat = false,
 }: SidebarProps) {
   const isSearchActive =
     currentView === "landing" ||
@@ -154,6 +155,8 @@ export default function Sidebar({
     currentView === "plans" ||
     currentView === "subscription-checkout";
   const isListActive = currentView === "saved-lists";
+  // Conversation session — not route. ON when a Smart Search chat has ≥1 submitted prompt.
+  const hasActiveSmartSearchConversation = hasActiveChat;
 
   return (
     <div className="flex h-full w-[256px] shrink-0 flex-col bg-[#1D2939] pb-2">
@@ -225,10 +228,10 @@ export default function Sidebar({
                 </span>
                 <span className="truncate text-base font-normal leading-[26px]">{item.label}</span>
               </span>
-              {/* Fixed-width slot so Search label position does not shift active ↔ inactive */}
+              {/* Fixed-width slot — indicator tracks active conversation, not selected route */}
               {isSearchItem ? (
                 <span className="flex size-3 shrink-0 items-center justify-center">
-                  {isActive ? <SearchActiveIndicator /> : null}
+                  {hasActiveSmartSearchConversation ? <SearchActiveIndicator /> : null}
                 </span>
               ) : item.badge === "gem" ? (
                 <GemBadge />
