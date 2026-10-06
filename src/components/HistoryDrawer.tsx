@@ -1,8 +1,8 @@
 interface HistoryItem {
   title: string;
-  meta: string;
-  records: string;
-  days: string;
+  date: string;
+  time: string;
+  creator: string;
   prompt: string;
 }
 
@@ -19,23 +19,23 @@ const HISTORY_GROUPS: HistoryGroup[] = [
     items: [
       {
         title: "Dallas leads",
-        meta: "created on Apr 18, 2023 at 10:00AM by Frank S",
-        records: "12k",
-        days: "7 days",
+        date: "Apr 18, 2023",
+        time: "10:00 AM",
+        creator: "Frank S",
         prompt: "Find businesses in Dallas with more than 20 employees",
       },
       {
         title: "New York trails",
-        meta: "created on Apr 19, 2023 at 11:30AM by Sarah J",
-        records: "10k",
-        days: "5 days",
+        date: "Apr 19, 2023",
+        time: "11:30 AM",
+        creator: "Sarah J",
         prompt: "Show New York businesses with verified contacts",
       },
       {
         title: "Los Angeles holds steady",
-        meta: "created on Apr 20, 2023 at 1:15PM by Alex R",
-        records: "8k",
-        days: "3 days",
+        date: "Apr 20, 2023",
+        time: "1:15 PM",
+        creator: "Alex R",
         prompt: "Find restaurants in Los Angeles with more than 50 employees",
       },
     ],
@@ -46,30 +46,21 @@ const HISTORY_GROUPS: HistoryGroup[] = [
     items: [
       {
         title: "Dallas leads",
-        meta: "created on Apr 18, 2023 at 10:00AM by Frank S",
-        records: "12k",
-        days: "7 days",
+        date: "Apr 18, 2023",
+        time: "10:00 AM",
+        creator: "Frank S",
         prompt: "Find businesses in Dallas with more than 20 employees",
       },
     ],
   },
 ];
 
-function HourglassIcon() {
+/** Genie Inline Alert Color=Blue uses Font Awesome “sparkles” at 14px / Blue 700. */
+function AlertSparklesIcon() {
   return (
-    <svg viewBox="0 0 14 16" fill="none" className="size-3.5 shrink-0" stroke="#ea580c" strokeWidth="1.4">
-      <path d="M2 1h10M2 15h10" strokeLinecap="round" />
-      <path d="M3 1v3l4 4-4 4v3M11 1v3L7 8l4 4v3" />
-    </svg>
-  );
-}
-
-function InfoIcon() {
-  return (
-    <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#475467]" stroke="currentColor" strokeWidth="1.5">
-      <circle cx="8" cy="8" r="6.5" />
-      <path d="M8 7.5v4" strokeLinecap="round" />
-      <circle cx="8" cy="5" r="0.75" fill="currentColor" stroke="none" />
+    <svg viewBox="0 0 14 14" fill="currentColor" className="size-3.5 shrink-0 text-g-blue-700 mt-0.5">
+      <path d="M5.25 1.2c0 0 .9 2.6 2.1 3.45C8.55 5.5 9 5.7 9 5.7s-.45.2-1.65 1.05C6.15 8.6 5.25 11.2 5.25 11.2s-.9-2.6-2.1-3.45C1.95 6.9 1.5 6.7 1.5 6.7s.45-.2 1.65-1.05C4.35 4.8 5.25 1.2 5.25 1.2Z" />
+      <path d="M10.5 7.2c0 0 .5 1.45 1.15 1.95.65.5.95.65.95.65s-.3.15-.95.65c-.65.5-1.15 1.95-1.15 1.95s-.5-1.45-1.15-1.95c-.65-.5-.95-.65-.95-.65s.3-.15.95-.65c.65-.5 1.15-1.95 1.15-1.95Z" />
     </svg>
   );
 }
@@ -91,64 +82,47 @@ export default function HistoryDrawer({ isFreemium, onClose, onSelectHistory }: 
       <div className="flex-1 relative" />
 
       <div
-        className="relative bg-[#f2f4f7] w-[38%] min-w-[420px] max-w-[560px] h-full flex flex-col shadow-2xl animate-slide-in-right"
+        className="relative bg-g-gray-100 w-[38%] min-w-[420px] max-w-[560px] h-full flex flex-col shadow-2xl animate-slide-in-right"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-5 shrink-0 bg-white border-b border-[#eaecf0]">
-          <h2 className="text-xl font-semibold text-[#1d2939]">Search history</h2>
+        <div className="flex items-center justify-between px-6 py-5 shrink-0 bg-g-white border-b border-g-gray-200">
+          <h2 className="text-xl font-semibold text-g-gray-800">Search history</h2>
           <button
             onClick={onClose}
-            className="px-4 py-1.5 text-sm font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors"
+            className="px-4 py-1.5 text-sm font-medium text-g-gray-700 border border-g-gray-300 rounded-lg bg-g-white hover:bg-g-gray-50 transition-colors"
           >
             Close
           </button>
         </div>
 
-        {/* History cards grouped by date */}
         <div className="flex-1 overflow-y-auto px-6 pt-5 pb-6 flex flex-col gap-5">
           {HISTORY_GROUPS.map((group) => (
             <div key={group.label}>
-              {/* Date label + count */}
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-medium text-[#667085]">{group.label}</span>
-                <span className="flex items-center justify-center size-5 rounded bg-[#eaecf0] text-[11px] font-semibold text-[#475467]">
+                <span className="text-sm font-medium text-g-gray-500">{group.label}</span>
+                <span className="flex items-center justify-center size-5 rounded bg-g-gray-200 text-[11px] font-semibold text-g-gray-600">
                   {group.count}
                 </span>
               </div>
 
-              {/* Divider */}
-              <div className="h-px bg-[#eaecf0] mb-3" />
+              <div className="h-px bg-g-gray-200 mb-3" />
 
-              {/* Cards */}
-              <div className="flex flex-col gap-3">
-                {group.items.map((item, i) => (
+              <div className="flex flex-col gap-2">
+                {group.items.map((item) => (
                   <button
-                    key={i}
+                    key={`${group.label}-${item.title}-${item.time}`}
                     onClick={() => {
                       onClose();
                       onSelectHistory?.(item.prompt);
                     }}
-                    className="w-full text-left bg-white border border-[#eaecf0] rounded-xl px-5 py-4 hover:border-[#93c5fd] hover:shadow-sm transition-all shadow-sm"
+                    className="w-full text-left bg-g-white border border-g-gray-200 rounded-lg px-4 py-3 hover:border-g-blue-200 hover:bg-g-blue-50/40 transition-colors"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-[#1d2939] mb-0.5 leading-snug">{item.title}</p>
-                        <p className="text-xs text-[#667085]">{item.meta}</p>
-                      </div>
-
-                      <div className="flex flex-col items-end gap-1.5 shrink-0">
-                        <span className="text-xs font-semibold text-[#344054] bg-[#f2f4f7] rounded px-2 py-0.5">
-                          Records {item.records}
-                        </span>
-                        {isFreemium && (
-                          <span className="flex items-center gap-1 text-xs font-semibold text-[#ea580c]">
-                            <HourglassIcon />
-                            {item.days}
-                          </span>
-                        )}
-                      </div>
-                    </div>
+                    <p className="text-[14px] font-semibold leading-5 text-g-gray-800">
+                      {item.title}
+                    </p>
+                    <p className="mt-0.5 text-[12px] font-normal leading-[18px] text-g-gray-600">
+                      {item.date} · {item.time} · {item.creator}
+                    </p>
                   </button>
                 ))}
               </div>
@@ -156,23 +130,23 @@ export default function HistoryDrawer({ isFreemium, onClose, onSelectHistory }: 
           ))}
         </div>
 
-        {/* Bottom info banner */}
+        {/* Genie Inline Alert — Color=Blue, Close Icon=No */}
         <div className="shrink-0 px-6 pb-6">
-          <div className="flex items-start gap-2.5 bg-white border border-[#eaecf0] rounded-xl px-4 py-3">
-            <InfoIcon />
-            <div className="text-sm text-[#475467] leading-relaxed">
+          <div className="flex items-start gap-2 rounded-lg border border-g-blue-200 bg-g-blue-50 px-4 py-4">
+            <AlertSparklesIcon />
+            <p className="text-[12px] font-medium leading-[18px] text-g-blue-700">
               {isFreemium
                 ? "Freemium chat history is available for 7 days."
                 : "Your chat history is available for 12 months."}
               {isFreemium && (
                 <>
                   {" "}
-                  <button className="underline text-[#475467] hover:text-[#1d2939] font-medium">
+                  <button className="underline font-medium text-g-blue-600 hover:text-g-blue-700">
                     Upgrade for 12 months of history.
                   </button>
                 </>
               )}
-            </div>
+            </p>
           </div>
         </div>
       </div>
