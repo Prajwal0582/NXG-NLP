@@ -1,4 +1,5 @@
 import { useState } from "react";
+import type { ScenarioLead } from "../data/searchScenarios";
 
 interface Lead {
   name: string;
@@ -21,105 +22,39 @@ interface LeadTableProps {
   hideDuplicateHeader?: boolean;
   totalLeads?: number;
   totalPages?: number;
+  /** Scenario-driven display leads (paginated subset). */
+  scenarioLeads?: ScenarioLead[];
+  pageSize?: number;
 }
 
-const FREEMIUM_LEADS: Lead[] = [
-  {
-    name: "P*******",
-    location: "Santa Clara, CA",
-    phone: "(310) ***-****",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "P*******",
-    title: "CEO",
-    email: "***** *****",
-  },
-  {
-    name: "X********",
-    location: "Corona, CA",
-    phone: "(510) ***-****",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "X** C****",
-    title: "CEO",
-    email: "get email address",
-  },
-  {
-    name: "Q******",
-    location: "Corona, CA",
-    phone: "(310) ***-****",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "Q**** P*",
-    title: "CEO",
-    email: "get email address",
-  },
-  {
-    name: "A**** ****",
-    location: "Santa Clara, CA",
-    phone: "(510) ***-****",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "A**** S****",
-    title: "CEO",
-    email: "get email address",
-  },
-];
-
-const SUBSCRIPTION_LEADS: Lead[] = [
-  {
-    name: "Pathways Health",
-    location: "Santa Clara, CA",
-    phone: "(310) 555-0182",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "Patricia Wong",
-    title: "CEO",
-    email: "patricia@pathwayshealth.com",
-    verified: true,
-  },
-  {
-    name: "Xcell Medical",
-    location: "Corona, CA",
-    phone: "(510) 555-0234",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "Xia Clark",
-    title: "CEO",
-    email: "xia.clark@xcellmedical.com",
-    verified: true,
-  },
-  {
-    name: "Quantum PT",
-    location: "Corona, CA",
-    phone: "(310) 555-0311",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "Quinn Pi",
-    title: "CEO",
-    email: "q.pi@quantumpt.com",
-    verified: false,
-  },
-  {
-    name: "Alpha Care",
-    location: "Santa Clara, CA",
-    phone: "(510) 555-0418",
-    industry: "Physicians 8011-01",
-    revenue: "Less than $500,000",
-    employees: "51-100",
-    contact: "Alice Smith",
-    title: "CEO",
-    email: "a.smith@alphacare.com",
-    verified: true,
-  },
-];
+function toDisplayLead(s: ScenarioLead, isFreemium: boolean): Lead {
+  if (isFreemium) {
+    return {
+      name: s.nameMasked,
+      location: s.location,
+      phone: s.phoneMasked,
+      industry: s.industry,
+      revenue: s.revenue,
+      employees: s.employees,
+      contact: s.contactMasked,
+      title: s.title,
+      email: s.emailMasked === "***** *****" ? "get email address" : s.emailMasked,
+      verified: false,
+    };
+  }
+  return {
+    name: s.name,
+    location: s.location,
+    phone: s.phone,
+    industry: s.industry,
+    revenue: s.revenue,
+    employees: s.employees,
+    contact: s.contact,
+    title: s.title,
+    email: s.email,
+    verified: s.verified,
+  };
+}
 
 function LockIcon() {
   return (
@@ -149,11 +84,35 @@ function SortIcon() {
   );
 }
 
-export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, hideDuplicateHeader, totalLeads = 71, totalPages = 4 }: LeadTableProps) {
+export default function LeadTable({
+  isFreemium,
+  onPurchase,
+  onSave,
+  empFilter,
+  hideDuplicateHeader,
+  totalLeads = 0,
+  totalPages = 1,
+  scenarioLeads,
+  pageSize = 10,
+}: LeadTableProps) {
   const [expandedRow, setExpandedRow] = useState<number | null>(null);
-  const leads = isFreemium ? FREEMIUM_LEADS : SUBSCRIPTION_LEADS;
-  const filtered = empFilter ? leads.filter((_, i) => i % 2 === 0) : leads;
-  const rows = filtered.slice(0, 4);
+  const [page, setPage] = useState(1);
+
+  const source = scenarioLeads ?? [];
+  const displayAll = source.map((s) => toDisplayLead(s, isFreemium));
+  const filtered = empFilter ? displayAll.filter((_, i) => i % 2 === 0) : displayAll;
+
+  const pagesFromData = Math.max(1, Math.ceil(filtered.length / pageSize));
+  // Believable page count from totalMatches; clamp navigation to available mock rows.
+  const pages = Math.max(totalPages, pagesFromData);
+  const safePage = Math.min(page, pagesFromData);
+  const start = (safePage - 1) * pageSize;
+  const rows = filtered.slice(start, start + pageSize);
+
+  function go(next: number) {
+    setExpandedRow(null);
+    setPage(Math.max(1, Math.min(next, pagesFromData)));
+  }
 
   return (
     <div>
@@ -163,6 +122,9 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
             <h3 className="text-sm font-semibold text-[#1d2939]">Top Qualified Leads</h3>
             <p className="text-xs text-[#475467] mt-0.5">
               Ranked by revenue and employee count with verified contact information.
+              {totalLeads > 0 && (
+                <span className="text-[#667085]"> Showing {rows.length} of {totalLeads.toLocaleString()} matches.</span>
+              )}
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -177,7 +139,6 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
       )}
 
       <div className="border border-[#eaecf0] rounded-xl overflow-hidden">
-        {/* Header */}
         <div className="grid grid-cols-3 bg-[#f9fafb] border-b border-[#eaecf0]">
           {["Business Information", "Business Details", "Contacts"].map((h) => (
             <div key={h} className="flex items-center gap-1.5 px-4 py-2.5">
@@ -187,14 +148,12 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
           ))}
         </div>
 
-        {/* Rows */}
         {rows.map((lead, i) => (
-          <div key={i}>
+          <div key={`${lead.name}-${start + i}`}>
             <div
               className="grid grid-cols-3 border-b border-[#eaecf0] last:border-b-0 hover:bg-[#f9fafb] cursor-pointer transition-colors"
               onClick={() => setExpandedRow(expandedRow === i ? null : i)}
             >
-              {/* Business Info */}
               <div className="px-4 py-3.5">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   {isFreemium && <LockIcon />}
@@ -215,7 +174,6 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
                 </div>
               </div>
 
-              {/* Business Details */}
               <div className="px-4 py-3.5 border-x border-[#eaecf0]">
                 <div className="text-xs text-[#475467] space-y-1.5">
                   <div className="flex items-start gap-1.5">
@@ -242,12 +200,11 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
                 </div>
               </div>
 
-              {/* Contacts */}
               <div className="px-4 py-3.5">
                 <div className="flex items-center justify-between mb-1.5">
                   <span className="text-sm font-medium text-[#1d2939]">{lead.contact}</span>
                   <div className="flex items-center gap-1.5">
-                    {lead.verified && <VerifiedBadge />}
+                    {lead.verified && !isFreemium && <VerifiedBadge />}
                     <svg viewBox="0 0 12 12" fill="none" className={`size-3 text-[#98a2b3] transition-transform ${expandedRow === i ? "rotate-180" : ""}`} stroke="currentColor" strokeWidth="1.5">
                       <path d="M2 4l4 4 4-4" strokeLinecap="round" />
                     </svg>
@@ -284,22 +241,21 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
                   <div>
                     <p className="text-xs font-medium text-[#475467] mb-2">Company details</p>
                     <div className="space-y-1 text-xs text-[#344054]">
-                      <p>Founded: 2014</p>
-                      <p>Business type: Independent</p>
-                      <p>Ownership: Privately held</p>
+                      <p>Industry: {lead.industry}</p>
+                      <p>Employees: {lead.employees}</p>
+                      <p>Revenue: {lead.revenue}</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-xs font-medium text-[#475467] mb-2">Location</p>
                     <div className="space-y-1 text-xs text-[#344054]">
-                      <p>4120 State St</p>
                       <p>{lead.location}</p>
                       <p>USA</p>
                     </div>
                   </div>
                   <div>
                     <p className="text-xs font-medium text-[#475467] mb-2">Contact quality</p>
-                    <VerifiedBadge />
+                    {lead.verified && <VerifiedBadge />}
                     <p className="text-xs text-[#475467] mt-1.5">Contact verified within 90 days</p>
                   </div>
                 </div>
@@ -308,26 +264,45 @@ export default function LeadTable({ isFreemium, onPurchase, onSave, empFilter, h
           </div>
         ))}
 
-        {/* Pagination */}
         <div className="flex items-center justify-center gap-1.5 px-4 py-3 border-t border-[#eaecf0] bg-white">
-          <button className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#d0d5dd] cursor-not-allowed">
+          <button
+            type="button"
+            onClick={() => go(1)}
+            disabled={safePage <= 1}
+            className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#344054] disabled:text-[#d0d5dd] disabled:cursor-not-allowed"
+          >
             <svg viewBox="0 0 16 16" fill="none" className="size-3" stroke="currentColor" strokeWidth="1.5">
               <path d="M11 4L7 8l4 4M7 4L3 8l4 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <button className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#d0d5dd] cursor-not-allowed">
+          <button
+            type="button"
+            onClick={() => go(safePage - 1)}
+            disabled={safePage <= 1}
+            className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#344054] disabled:text-[#d0d5dd] disabled:cursor-not-allowed"
+          >
             <svg viewBox="0 0 16 16" fill="none" className="size-3" stroke="currentColor" strokeWidth="1.5">
               <path d="M10 4L6 8l4 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <span className="px-3 py-1 text-xs font-semibold text-[#016dee] bg-[#eff8ff] border border-[#b2ddff] rounded">1</span>
-          <span className="text-xs text-[#475467]">of {totalPages} pages</span>
-          <button className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#344054]">
+          <span className="px-3 py-1 text-xs font-semibold text-[#016dee] bg-[#eff8ff] border border-[#b2ddff] rounded">{safePage}</span>
+          <span className="text-xs text-[#475467]">of {pages} pages</span>
+          <button
+            type="button"
+            onClick={() => go(safePage + 1)}
+            disabled={safePage >= pagesFromData}
+            className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#344054] disabled:text-[#d0d5dd] disabled:cursor-not-allowed"
+          >
             <svg viewBox="0 0 16 16" fill="none" className="size-3" stroke="currentColor" strokeWidth="1.5">
               <path d="M6 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </button>
-          <button className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#344054]">
+          <button
+            type="button"
+            onClick={() => go(pagesFromData)}
+            disabled={safePage >= pagesFromData}
+            className="size-6 flex items-center justify-center border border-[#eaecf0] rounded bg-white hover:bg-[#f9fafb] text-[#344054] disabled:text-[#d0d5dd] disabled:cursor-not-allowed"
+          >
             <svg viewBox="0 0 16 16" fill="none" className="size-3" stroke="currentColor" strokeWidth="1.5">
               <path d="M5 4l4 4-4 4M9 4l4 4-4 4" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

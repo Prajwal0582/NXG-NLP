@@ -13,8 +13,19 @@ export type View =
 export type BillingPeriod = 'monthly' | 'annual';
 export type SelectedPlanId = 'basic' | 'pro' | 'team';
 
+/** Contextual one-time list purchase from SignalFuse → Pricing. */
+export interface ListPurchaseContext {
+  pricingMode: "purchase-list";
+  source: "signalfuse-results";
+  query: string;
+  scenarioId: string;
+  listName: string;
+  resultCount: number;
+  estimatedPrice: number;
+}
+
 export type UserScenario =
-  | 'freemium-24'
+  | 'freemium-20'
   | 'freemium-5'
   | 'freemium-0'
   | 'subscriber-free'

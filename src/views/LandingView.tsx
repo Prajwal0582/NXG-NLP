@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import type { UserScenario } from "../types";
+import { SUGGESTED_PROMPTS } from "../data/searchScenarios";
 
 interface LandingViewProps {
   scenario: UserScenario;
@@ -30,14 +31,11 @@ function SendIcon({ active }: { active: boolean }) {
   );
 }
 
-// Sliders / filter-controls icon — signals a manual, field-driven search
-// (rather than the magnifying glass, which reads as "search" in general).
-function SlidersIcon() {
+function ManualSearchIcon() {
   return (
-    <svg viewBox="0 0 16 16" fill="none" className="size-3.5" stroke="#016dee" strokeWidth="1.5" strokeLinecap="round">
-      <path d="M2 4.5h5M11 4.5h3M2 11.5h3M9 11.5h5" />
-      <circle cx="9" cy="4.5" r="1.6" />
-      <circle cx="7" cy="11.5" r="1.6" />
+    <svg viewBox="0 0 16 16" fill="none" className="size-3.5 shrink-0" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+      <circle cx="7" cy="7" r="4.5" />
+      <path d="m13 13-2.5-2.5" />
     </svg>
   );
 }
@@ -53,12 +51,14 @@ function SparkleChipIcon() {
   );
 }
 
+// Landing chip order matches product copy (restaurants first).
 const CHIPS = [
-  "Find restaurants in Texas with more than 20 employees",
-  "Show healthcare businesses in California with verified contacts",
-  "Find manufacturers with annual revenue above $5M",
-  "Find cafes within 10 miles of downtown Seattle",
+  SUGGESTED_PROMPTS.find((p) => p.includes("restaurants"))!,
+  SUGGESTED_PROMPTS.find((p) => p.includes("healthcare"))!,
+  SUGGESTED_PROMPTS.find((p) => p.includes("manufacturers"))!,
+  SUGGESTED_PROMPTS.find((p) => p.includes("cafes"))!,
 ];
+
 
 export default function LandingView({
   onSubmit,
@@ -66,10 +66,23 @@ export default function LandingView({
   onHistory,
 }: LandingViewProps) {
   const [input, setInput] = useState("");
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // Even when the free allowance is used up, the composer and suggestion chips
   // stay live so a click/submit still routes to the chat, where the upgrade
   // nudge is shown.
   const canSend = input.trim().length > 0;
+
+  /** Prefill only — never submit. Suggested prompts are shortcuts, not send actions. */
+  function handleSuggestedPromptClick(prompt: string) {
+    setInput(prompt);
+    requestAnimationFrame(() => {
+      const el = inputRef.current;
+      if (!el) return;
+      el.focus();
+      const end = prompt.length;
+      el.setSelectionRange(end, end);
+    });
+  }
 
   function handleSend() {
     if (!canSend) return;
@@ -116,17 +129,18 @@ export default function LandingView({
           {/* Search panel */}
           <div className="bg-white border border-[#eaecf0] rounded-[16px] shadow-sm px-[40px] pt-6 pb-6">
 
-            {/* Top row: plain text + manual search hyperlink */}
+            {/* Top row: helper text + Manual search secondary button */}
             <div className="flex items-center justify-between mb-4 gap-4">
               <p className="text-[14px] text-[#475467] font-normal whitespace-nowrap">
                 Explore, analyze, and uncover insights through natural-language queries
               </p>
               <button
+                type="button"
                 onClick={onManualSearch}
-                className="flex items-center gap-1.5 text-[12px] text-[#016dee] hover:underline whitespace-nowrap shrink-0 font-medium"
+                className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-[#D0D5DD] bg-white px-3 py-1.5 text-sm font-medium leading-5 text-[#475467] hover:bg-[#F9FAFB] transition-colors whitespace-nowrap"
               >
-                <SlidersIcon />
-                Switch to manual search
+                <ManualSearchIcon />
+                Manual search
               </button>
             </div>
 
@@ -134,6 +148,7 @@ export default function LandingView({
             <div className="rounded-xl p-px mb-5 bg-gradient-to-r from-[#c084fc] via-[#60a5fa] to-[#22d3ee]">
               <div className="bg-white rounded-[11px] flex items-center px-4 py-2.5 gap-3 h-[72px] relative">
                 <textarea
+                  ref={inputRef}
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKey}
@@ -165,7 +180,8 @@ export default function LandingView({
                 {CHIPS.slice(0, 2).map((chip, i) => (
                   <button
                     key={i}
-                    onClick={() => setInput(chip)}
+                    type="button"
+                    onClick={() => handleSuggestedPromptClick(chip)}
                     className="h-[28px] flex items-center gap-1.5 text-[12px] font-normal text-[#475467] bg-[#f0f5ff] hover:bg-[#e6effe] rounded-full px-3 transition-colors whitespace-nowrap"
                   >
                     <SparkleChipIcon />
@@ -177,7 +193,8 @@ export default function LandingView({
                 {CHIPS.slice(2, 4).map((chip, i) => (
                   <button
                     key={i + 2}
-                    onClick={() => setInput(chip)}
+                    type="button"
+                    onClick={() => handleSuggestedPromptClick(chip)}
                     className="h-[28px] flex items-center gap-1.5 text-[12px] font-normal text-[#475467] bg-[#f0f5ff] hover:bg-[#e6effe] rounded-full px-3 transition-colors whitespace-nowrap"
                   >
                     <SparkleChipIcon />

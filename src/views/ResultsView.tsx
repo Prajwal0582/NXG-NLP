@@ -1,6 +1,17 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import LeadTable from "../components/LeadTable";
 import type { UserScenario } from "../types";
+import {
+  resolveScenario,
+  resolveRefinement,
+  applyRefinement,
+  pageCount,
+  type SearchScenario,
+  type BarRow,
+  type DonutSeg,
+  type ScenarioLead,
+  type InsightBlock,
+} from "../data/searchScenarios";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -15,6 +26,29 @@ interface Turn {
   // ever generated (it never completes).
   frozen: boolean;
   invalid?: boolean;
+  /** Snapshot of result payload when this turn completed (initial or refined). */
+  resultSnapshot?: TurnResultPayload;
+}
+
+interface TurnResultPayload {
+  title: string;
+  totalMatches: number;
+  summaryIntro: string;
+  insights: InsightBlock[];
+  recommendation: string;
+  thoughtProcess: string[];
+  sources: string[];
+  bizTypeBars: BarRow[];
+  geoBars: BarRow[];
+  donutSegments: DonutSeg[];
+  leads: ScenarioLead[];
+  followUpChips: string[];
+  refineGuidance: string;
+  pageSize: number;
+  insightLine?: string;
+  subtext?: string;
+  isRefined: boolean;
+  chartType?: "biz" | "geo" | "donut";
 }
 
 interface ResultsViewProps {
@@ -28,7 +62,8 @@ interface ResultsViewProps {
   onDismissCreditCoach: () => void;
   onBack: () => void;
   onHistory: () => void;
-  onPurchase: () => void;
+  onPurchaseList: (resultCount: number) => void;
+  onBuyCredits: () => void;
   onPlans: () => void;
   onSave: () => void;
   onFeedback: (positive: boolean) => void;
@@ -37,58 +72,10 @@ interface ResultsViewProps {
 
 // ─── Processing steps ────────────────────────────────────────────────────────
 
-const PROCESSING_STEPS = [
-  { label: "Reviewing available data",       desc: "Scanning 7M+ healthcare business records across California" },
-  { label: "Identifying qualified matches",  desc: "Applying revenue, employee count, and location filters" },
-  { label: "Building insights",             desc: "Ranking leads by match score and contact quality" },
-];
-
-// ─── Follow-up content generator ─────────────────────────────────────────────
-
-interface FollowUpData {
-  insight: string;
-  subtext: string;
-  newCount: number;
-  totalPages: number;
-  chartType: "biz" | "geo" | "donut";
-}
-
-function resolveFollowUp(prompt: string): FollowUpData {
-  const p = prompt.toLowerCase();
-  if (p.includes("independent")) return {
-    insight: "Your list is now limited to independent operators.",
-    subtext: "Qualified matches reduced from 71 to 43 — independent practices account for 62% of your original pool.",
-    newCount: 43, totalPages: 3, chartType: "biz",
-  };
-  if (p.includes("los angeles") || p.includes("san diego") || p.includes("focus on")) return {
-    insight: "Filtered to Los Angeles and San Diego metro areas.",
-    subtext: "Qualified matches reduced from 71 to 38. These two markets together account for 54% of matched records.",
-    newCount: 38, totalPages: 2, chartType: "geo",
-  };
-  if (p.includes("verified")) return {
-    insight: "Your list now shows only businesses with verified contacts.",
-    subtext: "52 of 71 original matches have at least one verified contact on file — a strong starting point for outreach.",
-    newCount: 52, totalPages: 3, chartType: "donut",
-  };
-  if (p.includes("50") || p.includes("250") || p.includes("employee")) return {
-    insight: "Filtered to companies with 50–250 employees.",
-    subtext: "Qualified matches reduced from 71 to 29. This segment has the highest verified-contact density.",
-    newCount: 29, totalPages: 2, chartType: "donut",
-  };
-  return {
-    insight: "Your search criteria have been refined.",
-    subtext: "Qualified matches updated based on your refinement. Results ranked by revenue and contact quality.",
-    newCount: 45, totalPages: 3, chartType: "biz",
-  };
-}
-
-// ─── Suggested follow-up chips ────────────────────────────────────────────────
-
-const FOLLOW_UP_CHIPS = [
-  "Only show independent operators",
-  "Focus on Los Angeles and San Diego",
-  "Show businesses with verified contacts",
-  "Narrow this to companies with 50–250 employees",
+const PROCESSING_STEP_LABELS = [
+  "Reviewing available data",
+  "Identifying qualified matches",
+  "Building insights",
 ];
 
 // ─── Icon components ──────────────────────────────────────────────────────────
@@ -139,7 +126,6 @@ function SendIcon({ active }: { active: boolean }) {
 
 // ── Horizontal bar chart (light theme, gradient + hover tooltip) ─────────────
 
-interface BarRow { label: string; value: number }
 
 // Deep-navy → teal → emerald gradient reserved for the top-ranked bars.
 const BAR_GRADIENT = "linear-gradient(90deg, #0a3355 0%, #0d6a72 55%, #14b88a 100%)";
@@ -339,94 +325,54 @@ function DenseBarChart({
   );
 }
 
-const BIZ_TYPE_BARS: BarRow[] = [
-  { label: "Independent practices", value: 4402 },
-  { label: "Group practices",       value: 3187 },
-  { label: "Franchise networks",    value: 2201 },
-  { label: "Hospital-affiliated",   value: 1846 },
-  { label: "Urgent care clinics",   value: 1523 },
-  { label: "Specialty centers",     value: 1298 },
-  { label: "Ambulatory surgical",   value: 1074 },
-  { label: "Diagnostic labs",       value: 921  },
-  { label: "Rehab facilities",      value: 743  },
-  { label: "Home health agencies",  value: 612  },
-  { label: "Telehealth providers",  value: 498  },
-  { label: "Corporate chains",      value: 497  },
-];
-
-function BizTypeChart({ compact = false }: { compact?: boolean }) {
-  const rows = compact ? BIZ_TYPE_BARS.slice(0, 6) : BIZ_TYPE_BARS;
+function BizTypeChart({ rows, compact = false, title = "Top business types among qualified matches" }: { rows: BarRow[]; compact?: boolean; title?: string }) {
+  const display = compact ? rows.slice(0, 6) : rows;
   return (
     <DenseBarChart
-      title="Top business types among qualified matches"
-      rows={rows}
+      title={title}
+      rows={display}
       unit="Businesses"
       xTitle="Number of Businesses"
       yTitle="Business type"
-      source="Top business types among qualified matches"
+      source={title}
       labelWidth={148}
     />
   );
 }
 
-const GEO_BARS: BarRow[] = [
-  { label: "Los Angeles",   value: 1847 },
-  { label: "San Diego",     value: 1124 },
-  { label: "San Francisco", value: 892  },
-  { label: "Sacramento",    value: 681  },
-  { label: "San Jose",      value: 574  },
-  { label: "Fresno",        value: 398  },
-  { label: "Long Beach",    value: 341  },
-  { label: "Oakland",       value: 318  },
-  { label: "Bakersfield",   value: 287  },
-  { label: "Anaheim",       value: 264  },
-  { label: "Riverside",     value: 241  },
-  { label: "Santa Ana",     value: 223  },
-  { label: "Irvine",        value: 208  },
-  { label: "Stockton",      value: 187  },
-  { label: "Chula Vista",   value: 165  },
-];
-
-function GeoChart({ compact = false }: { compact?: boolean }) {
-  const rows = compact ? GEO_BARS.slice(0, 6) : GEO_BARS;
+function GeoChart({ rows, compact = false, title = "Top cities among qualified matches" }: { rows: BarRow[]; compact?: boolean; title?: string }) {
+  const display = compact ? rows.slice(0, 6) : rows;
   return (
     <DenseBarChart
-      title="Top cities among qualified matches"
-      rows={rows}
+      title={title}
+      rows={display}
       unit="Matches"
       xTitle="Number of Matches"
       yTitle="City"
-      source="Top cities among qualified matches"
+      source={title}
       labelWidth={112}
     />
   );
 }
 
-const DONUT_SEGMENTS = [
-  { label: "1–10 employees",    pct: 12, color: "#fca5a5" },
-  { label: "11–50 employees",   pct: 35, color: "#86efac" },
-  { label: "51–100 employees",  pct: 38, color: "#5eead4" },
-  { label: "101–250 employees", pct: 15, color: "#c4b5fd" },
-];
-
-function buildConic(segs: typeof DONUT_SEGMENTS) {
+function buildConic(segs: DonutSeg[]) {
   let pos = 0;
   return segs.map(s => { const start = pos; pos += s.pct; return `${s.color} ${start}% ${pos}%`; }).join(", ");
 }
 
-function DonutChart() {
+function DonutChart({ segments, centerLabel, title = "Employee-size mix" }: { segments: DonutSeg[]; centerLabel: string; title?: string }) {
   return (
     <div className="bg-white border border-[#eaecf0] rounded-xl p-5 shadow-sm">
-      <p className="text-xs font-semibold text-[#475467] uppercase tracking-wide mb-4">Employee-size mix</p>
+      <p className="text-xs font-semibold text-[#475467] uppercase tracking-wide mb-4">{title}</p>
       <div className="flex items-center gap-8">
         <div className="relative size-24 shrink-0">
-          <div className="size-24 rounded-full" style={{ background: `conic-gradient(${buildConic(DONUT_SEGMENTS)})` }} />
+          <div className="size-24 rounded-full" style={{ background: `conic-gradient(${buildConic(segments)})` }} />
           <div className="absolute inset-[18px] rounded-full bg-white flex items-center justify-center">
-            <span className="text-[11px] font-semibold text-[#344054]">71</span>
+            <span className="text-[10px] font-semibold text-[#344054] text-center leading-tight px-1">{centerLabel}</span>
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          {DONUT_SEGMENTS.map(s => (
+          {segments.map(s => (
             <div key={s.label} className="flex items-center gap-2">
               <div className="size-2.5 rounded-full shrink-0" style={{ backgroundColor: s.color }} />
               <span className="text-xs text-[#475467]">{s.label}</span>
@@ -437,12 +383,6 @@ function DonutChart() {
       </div>
     </div>
   );
-}
-
-function ChartForType({ type, compact = false }: { type: "biz" | "geo" | "donut"; compact?: boolean }) {
-  if (type === "biz")   return <BizTypeChart compact={compact} />;
-  if (type === "geo")   return <GeoChart compact={compact} />;
-  return <DonutChart />;
 }
 
 // ─── User bubble ──────────────────────────────────────────────────────────────
@@ -464,8 +404,21 @@ function UserBubble({ prompt }: { prompt: string }) {
 
 // ─── Inline processing block ──────────────────────────────────────────────────
 
-function InlineProcessingBlock({ stepStatuses, frozen = false }: { stepStatuses: StepStatus[]; frozen?: boolean }) {
+function InlineProcessingBlock({
+  stepStatuses,
+  frozen = false,
+  descs = [
+    "Scanning available business records",
+    "Applying filters and match criteria",
+    "Ranking leads by match score and contact quality",
+  ],
+}: {
+  stepStatuses: StepStatus[];
+  frozen?: boolean;
+  descs?: [string, string, string] | string[];
+}) {
   const executing = !frozen && stepStatuses.some(s => s === "active");
+  const steps = PROCESSING_STEP_LABELS.map((label, i) => ({ label, desc: descs[i] ?? "" }));
   return (
     <div className="mb-6 animate-fade-in">
       <div className="flex items-center gap-2 mb-4">
@@ -473,9 +426,9 @@ function InlineProcessingBlock({ stepStatuses, frozen = false }: { stepStatuses:
         <span className={`text-sm font-semibold ${frozen ? "text-[#98a2b3]" : "text-[#1d2939]"}`}>SignalFuse</span>
       </div>
       <div className="flex flex-col">
-        {PROCESSING_STEPS.map((step, i) => {
+        {steps.map((step, i) => {
           const status = stepStatuses[i];
-          const isLast = i === PROCESSING_STEPS.length - 1;
+          const isLast = i === steps.length - 1;
           return (
             <div key={i} className="flex gap-4">
               <div className="flex flex-col items-center">
@@ -519,23 +472,25 @@ function InlineProcessingBlock({ stepStatuses, frozen = false }: { stepStatuses:
 
 // ─── Action banner ─────────────────────────────────────────────────────────────
 
-function ActionBanner({ isFreemium, totalLeads, onSave, onPurchase }: {
-  isFreemium: boolean;
+function ActionBanner({ totalLeads, onSave, onPurchaseList }: {
   totalLeads: number;
   onSave: () => void;
-  onPurchase: () => void;
+  onPurchaseList: (resultCount: number) => void;
 }) {
   return (
     <div className="flex items-center justify-between bg-[#f8f9fb] border border-[#e4e7ec] rounded-xl px-4 py-3.5 mb-4">
       <div>
         <h4 className="text-sm font-semibold text-[#1d2939]">Save Lead List</h4>
-        <p className="text-xs text-[#667085] mt-0.5">{totalLeads} qualified leads ready to export or launch a campaign</p>
+        <p className="text-xs text-[#667085] mt-0.5">{totalLeads.toLocaleString()} qualified leads ready to export or launch a campaign</p>
       </div>
       <div className="flex items-center gap-2">
         <button onClick={onSave} className="flex items-center gap-1.5 px-4 py-2 bg-white border border-[#d0d5dd] text-[#344054] text-xs font-semibold rounded-lg hover:bg-[#f9fafb] transition-colors">
           Save list
         </button>
-        <button onClick={onPurchase} className="flex items-center gap-1.5 px-4 py-2 bg-[#008dc3] text-white text-xs font-semibold rounded-lg hover:bg-[#007aab] transition-colors">
+        <button
+          onClick={() => onPurchaseList(totalLeads)}
+          className="flex items-center gap-1.5 px-4 py-2 bg-[#008dc3] text-white text-xs font-semibold rounded-lg hover:bg-[#007aab] transition-colors"
+        >
           Purchase list
         </button>
       </div>
@@ -543,45 +498,153 @@ function ActionBanner({ isFreemium, totalLeads, onSave, onPurchase }: {
   );
 }
 
-// ─── Feedback row ─────────────────────────────────────────────────────────────
+// ─── Feedback row (inline) ───────────────────────────────────────────────────
+
+const FEEDBACK_CATEGORIES = [
+  "Wrong or irrelevant leads",
+  "Filters not applied correctly",
+  "Lead count looks off",
+  "Insights not useful",
+  "Too slow",
+  "Other",
+];
 
 function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }) {
   const [thumbsUp, setThumbsUp] = useState<boolean | null>(null);
+  const [formOpen, setFormOpen] = useState(false);
+  const [selectedChips, setSelectedChips] = useState<string[]>([]);
+  const [comment, setComment] = useState("");
+  const [submitted, setSubmitted] = useState(false);
+
+  function handleThumbsDown() {
+    setThumbsUp(false);
+    setFormOpen(true);
+  }
+
+  function toggleChip(chip: string) {
+    setSelectedChips((prev) =>
+      prev.includes(chip) ? prev.filter((c) => c !== chip) : [...prev, chip]
+    );
+  }
+
+  function handleSubmit() {
+    setSubmitted(true);
+    onFeedback(false);
+    setTimeout(() => {
+      setFormOpen(false);
+    }, 2000);
+  }
+
+  function handleCancel() {
+    setFormOpen(false);
+    setThumbsUp(null);
+    setSelectedChips([]);
+    setComment("");
+  }
+
   return (
-    <div className="flex items-center gap-3 py-4 border-t border-[#f2f4f7] mt-4">
-      <span className="text-sm text-[#475467]">Is this useful?</span>
-      <button onClick={() => { setThumbsUp(true); onFeedback(true); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === true ? "text-[#016dee]" : "text-[#98a2b3]"}`}>
-        <svg viewBox="0 0 18 18" fill={thumbsUp === true ? "#016dee" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M5 9V15H3V9h2zm1-1l3-6h.5a1.5 1.5 0 011.5 1.5v2.5h4a1.5 1.5 0 011.5 1.5L16 13a1.5 1.5 0 01-1.5 1.5H6V8z" strokeLinejoin="round" /></svg>
-      </button>
-      <button onClick={() => { setThumbsUp(false); onFeedback(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === false ? "text-[#e11d48]" : "text-[#98a2b3]"}`}>
-        <svg viewBox="0 0 18 18" fill={thumbsUp === false ? "#e11d48" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M13 9V3h2v6h-2zm-1 1l-3 6H8.5A1.5 1.5 0 017 14.5v-2.5H3A1.5 1.5 0 011.5 10.5L2 5A1.5 1.5 0 013.5 3.5H12V10z" strokeLinejoin="round" /></svg>
-      </button>
+    <div className="mt-4">
+      <div className="flex items-center gap-3 py-4 border-t border-[#f2f4f7]">
+        <span className="text-sm text-[#475467]">Is this useful?</span>
+        <button onClick={() => { setThumbsUp(true); onFeedback(true); setFormOpen(false); }} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === true ? "text-[#016dee]" : "text-[#98a2b3]"}`}>
+          <svg viewBox="0 0 18 18" fill={thumbsUp === true ? "#016dee" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M5 9V15H3V9h2zm1-1l3-6h.5a1.5 1.5 0 011.5 1.5v2.5h4a1.5 1.5 0 011.5 1.5L16 13a1.5 1.5 0 01-1.5 1.5H6V8z" strokeLinejoin="round" /></svg>
+        </button>
+        <button onClick={handleThumbsDown} className={`p-1 rounded hover:bg-[#f2f4f7] transition-colors ${thumbsUp === false ? "text-[#e11d48]" : "text-[#98a2b3]"}`}>
+          <svg viewBox="0 0 18 18" fill={thumbsUp === false ? "#e11d48" : "none"} className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M13 9V3h2v6h-2zm-1 1l-3 6H8.5A1.5 1.5 0 017 14.5v-2.5H3A1.5 1.5 0 011.5 10.5L2 5A1.5 1.5 0 013.5 3.5H12V10z" strokeLinejoin="round" /></svg>
+        </button>
+      </div>
+
+      {formOpen && (
+        <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-5 py-5 mb-4 animate-fade-in">
+          {submitted ? (
+            <div className="flex items-center gap-2 py-3">
+              <div className="size-5 bg-[#f6fef9] rounded-full flex items-center justify-center">
+                <svg viewBox="0 0 16 16" fill="none" className="size-3.5 text-[#067647]" stroke="currentColor" strokeWidth="2"><path d="M3 8l3.5 3.5L13 5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              </div>
+              <span className="text-sm font-medium text-[#1d2939]">Thank you for your feedback!</span>
+            </div>
+          ) : (
+            <>
+              <h4 className="text-sm font-semibold text-[#1d2939] mb-1">What went wrong with this response?</h4>
+              <p className="text-xs text-[#667085] mb-4 leading-relaxed">
+                Your feedback, this prompt and the response are shared with our Product Support team to improve Smart Search.
+              </p>
+
+              <div className="flex flex-wrap gap-2 mb-4">
+                {FEEDBACK_CATEGORIES.map((cat) => (
+                  <button
+                    key={cat}
+                    onClick={() => toggleChip(cat)}
+                    className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                      selectedChips.includes(cat)
+                        ? "bg-[#008dc3] text-white border-[#008dc3]"
+                        : "bg-white text-[#344054] border-[#d0d5dd] hover:border-[#98a2b3]"
+                    }`}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+
+              <textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Additional details (optional)"
+                className="w-full h-[80px] bg-white border border-[#eaecf0] rounded-lg px-3 py-2.5 text-sm text-[#1d2939] placeholder:text-[#98a2b3] focus:outline-none focus:border-[#008dc3] focus:ring-1 focus:ring-[#008dc3] resize-none mb-4"
+              />
+
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSubmit}
+                  disabled={selectedChips.length === 0}
+                  className="px-5 py-2 bg-[#008dc3] text-white text-sm font-medium rounded-lg hover:bg-[#007aab] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  Submit feedback
+                </button>
+                <button
+                  onClick={handleCancel}
+                  className="px-4 py-2 text-sm font-medium text-[#475467] hover:text-[#1d2939] transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
-// ─── First-turn result content ─────────────────────────────────────────────────
+// ─── First-turn / refined result content ─────────────────────────────────────
 
-function FirstTurnResult({ isFreemium, showChips, onPurchase, onSave, onFeedback, onChipClick }: {
+function ScenarioResultBody({
+  payload,
+  isFreemium,
+  onPurchaseList,
+  onSave,
+  onFeedback,
+}: {
+  payload: TurnResultPayload;
   isFreemium: boolean;
-  showChips: boolean;
-  onPurchase: () => void;
+  onPurchaseList: (resultCount: number) => void;
   onSave: () => void;
   onFeedback: (positive: boolean) => void;
-  onChipClick: (chip: string) => void;
 }) {
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [thoughtOpen, setThoughtOpen] = useState(false);
+  const centerLabel = payload.totalMatches >= 1000
+    ? `${(payload.totalMatches / 1000).toFixed(payload.totalMatches >= 10000 ? 0 : 1)}k`
+    : String(payload.totalMatches);
+  const pages = pageCount(payload.totalMatches, payload.pageSize);
 
   return (
     <div className="animate-fade-in">
-      {/* SignalFuse header */}
       <div className="flex items-center gap-2 mb-3">
         <SparkleIcon />
         <span className="text-sm font-semibold text-[#1d2939]">SignalFuse</span>
       </div>
 
-      {/* Thought process disclosure */}
       <button
         onClick={() => setThoughtOpen(o => !o)}
         className="flex items-center gap-1.5 text-xs text-[#667085] hover:text-[#344054] mb-4 border border-[#eaecf0] rounded-md px-2.5 py-1 transition-colors"
@@ -592,169 +655,131 @@ function FirstTurnResult({ isFreemium, showChips, onPurchase, onSave, onFeedback
       </button>
       {thoughtOpen && (
         <div className="mb-4 bg-[#f9fafb] border border-[#eaecf0] rounded-lg px-4 py-3 text-xs text-[#667085] space-y-1 animate-fade-in">
-          <p>Applied filters: California · Healthcare (SIC 8011) · 50+ employees · Revenue ≥ $500K</p>
-          <p>Ranked by: verified contact availability, revenue, employee count</p>
-          <p>Data source: Data Axle Business Database (July 2026 update)</p>
+          {payload.thoughtProcess.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </div>
       )}
 
-      {/* Result title */}
+      {payload.isRefined && payload.insightLine && (
+        <>
+          <p className="text-sm font-medium text-[#1d2939] mb-1">Refined results</p>
+          <p className="text-sm text-[#475467] mb-2 leading-relaxed">{payload.insightLine}</p>
+          {payload.subtext && (
+            <p className="text-sm text-[#475467] mb-4 leading-relaxed">{payload.subtext}</p>
+          )}
+        </>
+      )}
+
       <h2 className="text-[15px] font-semibold text-[#1d2939] mb-2">
-        Healthcare Businesses in California — 71 Qualified Matches Found
+        {payload.title}
       </h2>
 
-      {/* Count */}
+      <p
+        className="text-sm text-[#475467] mb-4 leading-relaxed"
+        dangerouslySetInnerHTML={{ __html: payload.summaryIntro }}
+      />
+
+      {payload.insights.map((ins) => (
+        <p key={ins.label} className="text-sm text-[#475467] mb-3 leading-relaxed">
+          <span className="font-medium text-[#344054]">{ins.label}</span> — {ins.text}
+        </p>
+      ))}
+
       <p className="text-sm text-[#475467] mb-4 leading-relaxed">
-        I found <strong className="font-semibold text-[#1d2939]">71 healthcare businesses in California</strong> matching your criteria. Here is a breakdown of the results:
+        <span className="font-medium text-[#344054]">Recommendation</span> — {payload.recommendation}
       </p>
 
-      {/* Business-type insight */}
-      <p className="text-sm text-[#475467] mb-3 leading-relaxed">
-        <span className="font-medium text-[#344054]">Business type</span> — The majority (62%) are independent practices, followed by franchise networks (31%) and corporate chains (7%). Independent operators typically move faster through vendor evaluation.
-      </p>
-
-      {/* Geographic insight */}
-      <p className="text-sm text-[#475467] mb-3 leading-relaxed">
-        <span className="font-medium text-[#344054]">Geographic concentration</span> — Los Angeles (1,847) and San Diego (1,124) account for the highest match density. San Francisco and Sacramento follow, making them strong secondary targets.
-      </p>
-
-      {/* Employee-size insight */}
-      <p className="text-sm text-[#475467] mb-3 leading-relaxed">
-        <span className="font-medium text-[#344054]">Employee size</span> — 38% of matched businesses have 51–100 employees, indicating mid-size operations likely to have dedicated procurement staff. Contact readiness is highest in this band.
-      </p>
-
-      {/* Outreach recommendation */}
-      <p className="text-sm text-[#475467] mb-4 leading-relaxed">
-        <span className="font-medium text-[#344054]">Recommendation</span> — Prioritise independent practices in Los Angeles and San Diego with verified contacts. This cohort has the fastest response time and the highest proportion of decision-maker titles on file.
-      </p>
-
-      {/* Sources + feedback */}
       <div className="flex items-center justify-between mb-2">
         <button
           onClick={() => setSourcesOpen(o => !o)}
           className="flex items-center gap-1.5 text-xs text-[#475467] hover:text-[#1d2939] transition-colors"
         >
           <svg viewBox="0 0 12 12" fill="none" className="size-3" stroke="currentColor" strokeWidth="1.5"><rect x="1" y="2" width="10" height="8" rx="1" /><path d="M3 5h6M3 7h4" strokeLinecap="round" /></svg>
-          Sources (2)
+          Sources ({payload.sources.length})
           <svg viewBox="0 0 12 12" fill="none" className={`size-3 transition-transform ${sourcesOpen ? "rotate-180" : ""}`} stroke="currentColor" strokeWidth="1.5"><path d="M2 4l4 4 4-4" strokeLinecap="round" /></svg>
         </button>
       </div>
       {sourcesOpen && (
         <div className="mb-4 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-3 space-y-1.5 animate-fade-in">
-          <p className="text-xs text-[#016dee] hover:underline cursor-pointer">1. US Business Database — Healthcare Physicians (SIC 8011)</p>
-          <p className="text-xs text-[#016dee] hover:underline cursor-pointer">2. Verified Contacts Data Axle File — California region</p>
+          {payload.sources.map((s) => (
+            <p key={s} className="text-xs text-[#016dee] hover:underline cursor-pointer">{s}</p>
+          ))}
         </div>
       )}
 
-      {/* Charts */}
       <div className="space-y-4 mt-6 mb-8">
-        <BizTypeChart />
-        <GeoChart />
-        <DonutChart />
-      </div>
-
-      {/* Qualified leads */}
-      <LeadsSection
-        isFreemium={isFreemium}
-        totalLeads={71}
-        totalPages={4}
-        onSave={onSave}
-        onPurchase={onPurchase}
-      />
-
-      {/* Follow-up chips */}
-      {showChips && (
-        <FollowUpChips onChipClick={onChipClick} />
-      )}
-
-      <FeedbackRow onFeedback={onFeedback} />
-    </div>
-  );
-}
-
-// ─── Follow-up turn result ────────────────────────────────────────────────────
-
-function FollowUpTurnResult({ prompt, isFreemium, showChips, onPurchase, onSave, onFeedback, onChipClick }: {
-  prompt: string;
-  isFreemium: boolean;
-  showChips: boolean;
-  onPurchase: () => void;
-  onSave: () => void;
-  onFeedback: (positive: boolean) => void;
-  onChipClick: (chip: string) => void;
-}) {
-  const data = resolveFollowUp(prompt);
-
-  return (
-    <div className="animate-fade-in">
-      <div className="flex items-center gap-2 mb-3">
-        <SparkleIcon />
-        <span className="text-sm font-semibold text-[#1d2939]">SignalFuse</span>
-      </div>
-
-      <p className="text-sm font-medium text-[#1d2939] mb-1">{data.insight}</p>
-      <p className="text-sm text-[#475467] mb-4 leading-relaxed">{data.subtext}</p>
-
-      <FeedbackRow onFeedback={onFeedback} />
-
-      <div className="mt-6 mb-8">
-        <ChartForType type={data.chartType} compact />
+        <BizTypeChart rows={payload.bizTypeBars} />
+        <GeoChart rows={payload.geoBars} />
+        <DonutChart
+          segments={payload.donutSegments}
+          centerLabel={centerLabel}
+          title={
+            payload.donutSegments.some((s) => s.label.includes("$") || s.label.includes("mile"))
+              ? payload.donutSegments[0].label.includes("$")
+                ? "Revenue distribution"
+                : "Distance from downtown"
+              : "Employee-size mix"
+          }
+        />
       </div>
 
       <LeadsSection
         isFreemium={isFreemium}
-        totalLeads={data.newCount}
-        totalPages={data.totalPages}
+        totalLeads={payload.totalMatches}
+        totalPages={pages}
+        pageSize={payload.pageSize}
+        scenarioLeads={payload.leads}
         onSave={onSave}
-        onPurchase={onPurchase}
+        onPurchaseList={onPurchaseList}
       />
 
-      {showChips && (
-        <FollowUpChips onChipClick={onChipClick} />
-      )}
+      <FeedbackRow onFeedback={onFeedback} />
+
+      <p className="text-sm text-[#667085] mt-3 mb-1">
+        You can further refine these results or optimize your list by adding another prompt below.
+      </p>
     </div>
   );
 }
 
 // ─── Leads section (banner + table) ──────────────────────────────────────────
 
-function LeadsSection({ isFreemium, totalLeads, totalPages, onSave, onPurchase }: {
+function LeadsSection({
+  isFreemium,
+  totalLeads,
+  totalPages,
+  pageSize,
+  scenarioLeads,
+  onSave,
+  onPurchaseList,
+}: {
   isFreemium: boolean;
   totalLeads: number;
   totalPages: number;
+  pageSize: number;
+  scenarioLeads: ScenarioLead[];
   onSave: () => void;
-  onPurchase: () => void;
+  onPurchaseList: (resultCount: number) => void;
 }) {
   return (
     <div className="mb-6">
       <h3 className="text-base font-semibold text-[#1d2939] mb-0.5">Top Qualified Leads</h3>
-      <p className="text-sm text-[#475467] mb-3">Ranked by revenue and employee count with verified contact information.</p>
-      <ActionBanner isFreemium={isFreemium} totalLeads={totalLeads} onSave={onSave} onPurchase={onPurchase} />
-      <LeadTable isFreemium={isFreemium} onPurchase={onPurchase} onSave={onSave} hideDuplicateHeader totalLeads={totalLeads} totalPages={totalPages} />
-    </div>
-  );
-}
-
-// ─── Follow-up chips ──────────────────────────────────────────────────────────
-
-function FollowUpChips({ onChipClick }: { onChipClick: (c: string) => void }) {
-  return (
-    <div className="mt-6 mb-2">
-      <div className="flex items-center gap-2 mb-3">
-        <SparkleIcon size="size-3.5" />
-        <span className="text-sm font-semibold text-[#1d2939]">Suggested follow-up questions</span>
-      </div>
-      <div className="flex flex-wrap gap-2">
-        {FOLLOW_UP_CHIPS.map(chip => (
-          <button
-            key={chip}
-            onClick={() => onChipClick(chip)}
-            className="px-3.5 py-1.5 text-sm text-[#016dee] border border-[#b2ddff] bg-[#f5f9ff] rounded-full hover:bg-[#eff8ff] hover:border-[#016dee] transition-colors"
-          >
-            {chip}
-          </button>
-        ))}
-      </div>
+      <p className="text-sm text-[#475467] mb-3">
+        Ranked by revenue and employee count with verified contact information.
+        {" "}Showing a paginated sample of {totalLeads.toLocaleString()} qualified matches.
+      </p>
+      <ActionBanner totalLeads={totalLeads} onSave={onSave} onPurchaseList={onPurchaseList} />
+      <LeadTable
+        isFreemium={isFreemium}
+        onPurchase={() => onPurchaseList(totalLeads)}
+        onSave={onSave}
+        hideDuplicateHeader
+        totalLeads={totalLeads}
+        totalPages={totalPages}
+        scenarioLeads={scenarioLeads}
+        pageSize={pageSize}
+      />
     </div>
   );
 }
@@ -772,7 +797,8 @@ export default function ResultsView({
   onDismissCreditCoach,
   onBack,
   onHistory,
-  onPurchase,
+  onPurchaseList,
+  onBuyCredits,
   onPlans,
   onSave,
   onFeedback,
@@ -788,6 +814,8 @@ export default function ResultsView({
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
 
+  const searchScenario = useMemo(() => resolveScenario(prompt), [prompt]);
+
   const free = scenario.startsWith("freemium-");
   const isCredit = scenario === "subscriber-credit" || scenario === "subscriber-credit-0";
   const isSubFreeTransitioned = scenario === "subscriber-free" && promptsRemaining <= 0 && creditsRemaining > 0;
@@ -800,6 +828,82 @@ export default function ResultsView({
   const isLowPrompt = free && promptsRemaining <= 5;
   // Low = enough for ≤ 2 more prompts (each costs 2 credits).
   const isLowCredit = isCreditMode && creditsRemaining <= 4;
+
+  function buildInitialPayload(sc: SearchScenario): TurnResultPayload {
+    return {
+      title: sc.title,
+      totalMatches: sc.totalMatches,
+      summaryIntro: sc.summaryIntro,
+      insights: sc.insights,
+      recommendation: sc.recommendation,
+      thoughtProcess: sc.thoughtProcess,
+      sources: sc.sources,
+      bizTypeBars: sc.bizTypeBars,
+      geoBars: sc.geoBars,
+      donutSegments: sc.donutSegments,
+      leads: sc.leads,
+      followUpChips: sc.followUpChips,
+      refineGuidance: sc.refineGuidance,
+      pageSize: sc.pageSize,
+      isRefined: false,
+    };
+  }
+
+  function buildRefinedPayload(sc: SearchScenario, followUpPrompt: string, previousCount: number): TurnResultPayload {
+    const refinement = resolveRefinement(sc, followUpPrompt);
+    const applied = applyRefinement(sc, refinement, previousCount);
+    let count = applied.totalMatches;
+    // Always narrow on follow-up relative to the prior cohort.
+    if (count >= previousCount) {
+      count = Math.max(48, Math.round(previousCount * 0.62));
+    }
+    return {
+      title: applied.title.includes(String(applied.totalMatches))
+        ? applied.title.replace(applied.totalMatches.toLocaleString(), count.toLocaleString()).replace(String(applied.totalMatches), count.toLocaleString())
+        : `Refined results — ${count.toLocaleString()} Qualified Matches`,
+      totalMatches: count,
+      summaryIntro: applied.summaryIntro.replace(applied.totalMatches.toLocaleString(), count.toLocaleString()).replace(String(applied.totalMatches), count.toLocaleString()),
+      insights: applied.insights,
+      recommendation: applied.recommendation,
+      thoughtProcess: applied.thoughtProcess,
+      sources: sc.sources,
+      bizTypeBars: applied.bizTypeBars,
+      geoBars: applied.geoBars,
+      donutSegments: applied.donutSegments,
+      leads: applied.leads,
+      followUpChips: applied.followUpChips,
+      refineGuidance: sc.refineGuidance,
+      pageSize: sc.pageSize,
+      insightLine: applied.insightLine ?? "I narrowed the previous results to businesses matching your additional criteria.",
+      subtext: applied.subtext ?? `Qualified matches reduced from ${previousCount.toLocaleString()} to ${count.toLocaleString()}.`,
+      isRefined: true,
+      chartType: refinement?.chartType ?? "biz",
+    };
+  }
+
+  // Precompute result payloads per turn so prior turns keep their snapshot
+  // and each follow-up narrows from the previous count.
+  const turnPayloads = useMemo(() => {
+    const payloads: (TurnResultPayload | null)[] = [];
+    let prevCount = searchScenario.totalMatches;
+    turns.forEach((turn, i) => {
+      if (!turn.isComplete || turn.invalid || turn.frozen) {
+        payloads.push(null);
+        return;
+      }
+      if (turn.resultSnapshot) {
+        payloads.push(turn.resultSnapshot);
+        prevCount = turn.resultSnapshot.totalMatches;
+        return;
+      }
+      const payload = i === 0
+        ? buildInitialPayload(searchScenario)
+        : buildRefinedPayload(searchScenario, turn.prompt, prevCount);
+      payloads.push(payload);
+      prevCount = payload.totalMatches;
+    });
+    return payloads;
+  }, [turns, searchScenario]);
 
   // Add a turn and run its processing animation. When `frozen` (user is out of
   // prompts), the block is added greyed and stuck — no timers run, so it never
@@ -819,8 +923,22 @@ export default function ResultsView({
     setTimeout(() => { upd(0, "done"); upd(1, "active"); }, 1200);
     setTimeout(() => { upd(1, "done"); upd(2, "active"); }, 2300);
     setTimeout(() => upd(2, "done"), 3200);
-    setTimeout(() => setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, isComplete: true })), 3500);
-  }, []);
+    setTimeout(() => {
+      setTurns(prev => {
+        const idx = prev.findIndex(t => t.id === id);
+        if (idx < 0) return prev;
+        let prevCount = searchScenario.totalMatches;
+        for (let i = 0; i < idx; i++) {
+          const snap = prev[i].resultSnapshot;
+          if (snap) prevCount = snap.totalMatches;
+        }
+        const snapshot = idx === 0
+          ? buildInitialPayload(searchScenario)
+          : buildRefinedPayload(searchScenario, p, prevCount);
+        return prev.map(t => t.id !== id ? t : { ...t, isComplete: true, resultSnapshot: snapshot });
+      });
+    }, 3500);
+  }, [searchScenario]);
 
   // Boot first turn from the prompt prop — guard against Strict Mode double-invoke.
   // If the user is already out of prompts (freemium-0), the turn is frozen: the
@@ -875,7 +993,6 @@ export default function ResultsView({
     }
   }
 
-  const lastTurnId = turns[turns.length - 1]?.id;
   // Out of prompts → lock the send button (composer, alert and counter stay visible).
   const sendLocked = isExhausted || isCreditExhausted;
   const sendDisabled = !followUpInput.trim() || sendLocked;
@@ -907,44 +1024,35 @@ export default function ResultsView({
         <div className="max-w-[1150px] mx-auto px-4 py-8">
 
           {turns.map((turn, i) => {
-            const isFirstTurn = i === 0;
-            const isLastTurn = turn.id === lastTurnId;
+            const payload = turnPayloads[i] ?? turn.resultSnapshot ?? null;
 
             return (
               <div key={turn.id} className="mb-8">
                 <UserBubble prompt={turn.prompt} />
 
                 {turn.invalid && turn.isComplete ? (
-                  <div className="mt-3 flex items-start gap-3">
-                    <div className="size-7 rounded-full bg-gradient-to-br from-[#60a5fa] to-[#c084fc] flex items-center justify-center shrink-0">
-                      <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="white" strokeWidth="1.5"><path d="M7 1v5l3 2" strokeLinecap="round" strokeLinejoin="round" /><circle cx="7" cy="7" r="5.5" /></svg>
+                  <div className="animate-fade-in mt-3">
+                    <div className="flex items-center gap-2 mb-3">
+                      <SparkleIcon />
+                      <span className="text-sm font-semibold text-[#1d2939]">SignalFuse</span>
                     </div>
-                    <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl px-4 py-3">
-                      <p className="text-sm text-[#475467]">Seems like <strong>invalid input</strong>. I can currently help only with finding leads for you.</p>
-                    </div>
+                    <p className="text-sm text-[#475467] leading-relaxed">I can currently help only with finding leads for you.</p>
                   </div>
                 ) : !turn.isComplete ? (
-                  <InlineProcessingBlock stepStatuses={turn.stepStatuses} frozen={turn.frozen} />
-                ) : isFirstTurn ? (
-                  <FirstTurnResult
+                  <InlineProcessingBlock
+                    stepStatuses={turn.stepStatuses}
+                    frozen={turn.frozen}
+                    descs={searchScenario.processingDescs}
+                  />
+                ) : payload ? (
+                  <ScenarioResultBody
+                    payload={payload}
                     isFreemium={free}
-                    showChips={false}
-                    onPurchase={onPurchase}
+                    onPurchaseList={onPurchaseList}
                     onSave={onSave}
                     onFeedback={onFeedback}
-                    onChipClick={interceptSubmit}
                   />
-                ) : (
-                  <FollowUpTurnResult
-                    prompt={turn.prompt}
-                    isFreemium={free}
-                    showChips={false}
-                    onPurchase={onPurchase}
-                    onSave={onSave}
-                    onFeedback={onFeedback}
-                    onChipClick={interceptSubmit}
-                  />
-                )}
+                ) : null}
               </div>
             );
           })}
@@ -969,7 +1077,7 @@ export default function ResultsView({
                   </div>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => { setLowBalancePrompt(null); onPurchase(); }} className="px-3.5 py-1.5 text-xs font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">Top up</button>
+                  <button onClick={() => { setLowBalancePrompt(null); onBuyCredits(); }} className="px-3.5 py-1.5 text-xs font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">Top up</button>
                   <button onClick={handleLowBalanceContinue} className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#016dee] hover:bg-[#0052cc] rounded-lg transition-colors">Continue</button>
                 </div>
               </div>
@@ -1036,7 +1144,7 @@ export default function ResultsView({
                 </div>
                 <p className="text-sm text-[#b54708] ml-6">Your account credits have been exhausted. Purchase more credits to continue using Smart search.</p>
               </div>
-              <button onClick={onPurchase} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
+              <button onClick={onBuyCredits} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
             </div>
           )}
 

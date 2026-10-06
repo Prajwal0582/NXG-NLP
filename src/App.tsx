@@ -1,5 +1,6 @@
-import { useState } from "react";
-import type { View, UserScenario, ActiveTab, BillingPeriod, SelectedPlanId } from "./types";
+import { useEffect, useState } from "react";
+import type { View, UserScenario, ActiveTab, BillingPeriod, SelectedPlanId, ListPurchaseContext } from "./types";
+import { buildListPurchaseContext } from "./data/searchScenarios";
 
 import Sidebar from "./components/Sidebar";
 import TopHeader from "./components/TopHeader";
@@ -22,10 +23,10 @@ import SubscriptionCheckoutView from "./views/SubscriptionCheckoutView";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
-    case "freemium-24": return 24;
+    case "freemium-20": return 20;
     case "freemium-5": return 5;
     case "freemium-0": return 0;
-    case "subscriber-free": return 10;
+    case "subscriber-free": return 20;
     case "subscriber-credit": return 0;
     case "subscriber-credit-0": return 0;
   }
@@ -49,11 +50,11 @@ function isFreemiumScenario(s: UserScenario) {
 }
 
 export default function App() {
-  const [scenario, setScenario] = useState<UserScenario>("freemium-24");
+  const [scenario, setScenario] = useState<UserScenario>("freemium-20");
   const [view, setView] = useState<View>("scenario-launch");
   const [activeTab, setActiveTab] = useState<ActiveTab>("business");
-  const [promptsRemaining, setPromptsRemaining] = useState(getInitialPrompts("freemium-24"));
-  const [creditsRemaining, setCreditsRemaining] = useState(getInitialCredits("freemium-24"));
+  const [promptsRemaining, setPromptsRemaining] = useState(getInitialPrompts("freemium-20"));
+  const [creditsRemaining, setCreditsRemaining] = useState(getInitialCredits("freemium-20"));
   const [submittedPrompt, setSubmittedPrompt] = useState("");
   const [listSaved, setListSaved] = useState(false);
 
@@ -67,16 +68,34 @@ export default function App() {
   const [saveListModalOpen, setSaveListModalOpen] = useState(false);
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
 
-  const [freeTotal, setFreeTotal] = useState(25);
+  const [freeTotal, setFreeTotal] = useState(20);
   const reservedCredits = getReservedCredits(scenario);
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlanId>("pro");
   const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>("monthly");
   const [plansReturnView, setPlansReturnView] = useState<View>("landing");
+  /** Set only when entering Pricing from SignalFuse "Purchase list". Cleared for standard Access Pricing. */
+  const [listPurchaseContext, setListPurchaseContext] = useState<ListPurchaseContext | null>(null);
 
   function openPlans(from: View = view === "scenario-launch" ? "landing" : view) {
+    // Standard pricing discovery — never inherit a prior list purchase context.
+    setListPurchaseContext(null);
     setPlansReturnView(from === "plans" || from === "subscription-checkout" ? "landing" : from);
     setView("plans");
   }
+
+  function openPlansForListPurchase(resultCount: number) {
+    const ctx = buildListPurchaseContext(submittedPrompt, resultCount);
+    setListPurchaseContext(ctx);
+    setPlansReturnView("results");
+    setView("plans");
+  }
+
+  useEffect(() => {
+    document.title =
+      view === "plans" || view === "subscription-checkout"
+        ? "SalesGenie — Pricing"
+        : "SalesGenie";
+  }, [view]);
 
   function applyScenario(s: UserScenario, promptsOverride?: number) {
     setScenario(s);
@@ -85,6 +104,7 @@ export default function App() {
     setFreeTotal(promptsOverride !== undefined ? promptsOverride : 20);
     setCreditsRemaining(getInitialCredits(s));
     setListSaved(false);
+    setListPurchaseContext(null);
     setView("landing");
   }
 
@@ -114,6 +134,7 @@ export default function App() {
 
   function doSubmitPrompt(prompt: string) {
     setSubmittedPrompt(prompt);
+    setListPurchaseContext(null);
     setView("results"); // conversation view — no separate processing screen
 
     if (prompt.trim() === "123") return;
@@ -142,14 +163,17 @@ export default function App() {
     setSaveListModalOpen(true);
   }
 
-  function confirmSaveList(_name: string) {
+  const [justSavedListName, setJustSavedListName] = useState<string | null>(null);
+
+  function confirmSaveList(name: string) {
     setSaveListModalOpen(false);
     setListSaved(true);
-    setToast({ message: "List saved to Business Saved Lists.", type: "success" });
+    setJustSavedListName(name);
+    setView("saved-lists");
   }
 
-  function handleFeedback(positive: boolean) {
-    if (!positive) setFeedbackModalOpen(true);
+  function handleFeedback(_positive: boolean) {
+    // Feedback is now handled inline in ResultsView — no modal needed
   }
 
   // ResultsView manages its own turns — this only deducts credits/prompts
@@ -209,7 +233,11 @@ export default function App() {
             onDismissCreditCoach={() => setCreditCoachSeen(true)}
             onBack={() => setView("landing")}
             onHistory={() => setHistoryOpen(true)}
-            onPurchase={() => setView("purchase")}
+            onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}
+            onBuyCredits={() => {
+              setListPurchaseContext(null);
+              setView("purchase");
+            }}
             onPlans={() => openPlans("results")}
             onSave={handleSaveList}
             onFeedback={handleFeedback}
@@ -218,19 +246,25 @@ export default function App() {
         );
 
       case "manual-search":
-        return <ManualSearchView onBack={() => setView("landing")} />;
+        return <ManualSearchView onBack={() => setView("landing")} onPlans={() => openPlans("manual-search")} />;
 
       case "saved-lists":
         return (
-          <SavedListsView scenario={scenario} onStartAISearch={() => setView("landing")} />
+          <SavedListsView
+            scenario={scenario}
+            onStartAISearch={() => setView("landing")}
+            justSavedListName={justSavedListName}
+            onSaveComplete={() => setJustSavedListName(null)}
+          />
         );
 
       case "purchase":
         return (
           <PurchaseView
-            listName={submittedPrompt.slice(0, 30)}
+            listName={listPurchaseContext?.listName ?? submittedPrompt.slice(0, 30)}
             isFreemium={isFree}
-            onBack={() => setView("results")}
+            purchaseContext={listPurchaseContext}
+            onBack={() => setView(listPurchaseContext ? "plans" : "results")}
             onComplete={() => setView("purchase-success")}
           />
         );
@@ -246,13 +280,18 @@ export default function App() {
       case "plans":
         return (
           <PlansView
+            purchaseContext={listPurchaseContext}
             onBack={() => setView(plansReturnView === "subscription-checkout" ? "landing" : plansReturnView)}
             onSelectPlan={(planId, billing) => {
               setSelectedPlan(planId);
               setSelectedBilling(billing);
               setView("subscription-checkout");
             }}
-            onSearchLeads={() => setView("landing")}
+            onSearchLeads={() => {
+              setListPurchaseContext(null);
+              setView("landing");
+            }}
+            onBuyListCheckout={() => setView("purchase")}
           />
         );
 
