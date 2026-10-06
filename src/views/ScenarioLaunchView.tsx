@@ -24,7 +24,7 @@ const CARDS: ScenarioCard[] = [
     title: "Freemium — 5 Prompts Left",
     badge: "freemium",
     bullets: [
-      "5 free prompts remaining",
+      "5 of 20 free prompts remaining",
       "Obfuscated lead details",
       "Low-balance counter & upgrade nudge",
     ],
@@ -55,7 +55,7 @@ const CARDS: ScenarioCard[] = [
     title: "Existing Subscriber",
     badge: "subscriber",
     bullets: [
-      "5 free prompts available",
+      "5 of 20 free prompts available",
       "Full, unmasked lead details",
     ],
   },

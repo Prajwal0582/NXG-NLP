@@ -69,17 +69,16 @@ export default function TopHeader({
         <div ref={pillRef} className="relative mr-3">
           <button
             onClick={() => { setPillOpen((o) => !o); setAvatarOpen(false); }}
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-[12px] font-normal leading-[18px] border transition-colors ${
               isLow
                 ? "bg-[#fffaeb] border-[#fedf89] text-[#b54708] hover:bg-[#fef3c7]"
-                : "bg-[#f0f9ff] border-[#bae6fd] text-[#344054] hover:bg-[#e0f2fe]"
+                : "bg-[#f1f9fd] border-[#cae6f9] text-[#344054] hover:bg-[#e0f2fe]"
             }`}
           >
-            <LightningIcon fill={isLow ? "#f79009" : "#016dee"} />
-            <span>{promptsRemaining} of {freePromptsTotal} free prompts left</span>
-            <div className="w-14 h-1.5 bg-[#e4e7ec] rounded-full overflow-hidden ml-1">
+            <span>Free prompts: {promptsRemaining} of {freePromptsTotal}</span>
+            <div className="w-16 h-1.5 bg-[#e4e7ec] rounded-full overflow-hidden">
               <div
-                className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#38bdf8]"}`}
+                className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#008dc3]"}`}
                 style={{ width: `${pct}%` }}
               />
             </div>
@@ -90,31 +89,47 @@ export default function TopHeader({
               {/* Header row */}
               <div className="flex items-center justify-between pb-2 border-b border-[#f1f5f9]">
                 <p className="text-xs font-medium leading-[18px] text-[#0f172b]">AI Prompt Allowance</p>
-                <p className="text-xs font-normal leading-[18px] text-[#62748e]">Freemium</p>
+                <p className="text-xs font-normal leading-[18px] text-[#62748e]">{isFreemium ? "Freemium" : "Subscribed"}</p>
               </div>
 
               {/* Body */}
               <div className="pt-3">
-                <p className="text-xs font-medium leading-[18px] text-[#45556c]">
-                  Freemium accounts receive{" "}
-                  <span className="font-semibold text-[#0f172b]">{freePromptsTotal} initial free prompts</span>
-                  {" "}to explore lead generation.
-                </p>
+                {isFreemium ? (
+                  <>
+                    <p className="text-xs font-medium leading-[18px] text-[#45556c]">
+                      You have{" "}
+                      <span className="font-semibold text-[#0f172b]">{freePromptsTotal} free prompts</span>
+                      {" "}to explore lead generation.
+                    </p>
 
-                {/* Inline alert */}
-                <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
-                  <p className="text-xs font-normal leading-[18px] text-[#475467]">
-                    Prompt allowance applies per license ({freePromptsTotal} for new users, {freePromptsTotal} for existing users). Upgrade for full database unlocks.
-                  </p>
-                </div>
+                    <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
+                      <p className="text-xs font-normal leading-[18px] text-[#475467]">
+                        Upgrade to get more prompts and unlock full access.
+                      </p>
+                    </div>
 
-                {/* Upgrade button */}
-                <button
-                  onClick={() => { setPillOpen(false); onPlans(); }}
-                  className="w-full mt-2 bg-[#008dc3] border border-[#008dc3] text-white text-[14px] font-medium leading-[20px] py-1.5 px-3 rounded-md hover:bg-[#007aab] transition-colors"
-                >
-                  Upgrade account
-                </button>
+                    <button
+                      onClick={() => { setPillOpen(false); onPlans(); }}
+                      className="w-full mt-2 bg-[#008dc3] border border-[#008dc3] text-white text-[14px] font-medium leading-[20px] py-1.5 px-3 rounded-md hover:bg-[#007aab] transition-colors"
+                    >
+                      Upgrade account
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-xs font-medium leading-[18px] text-[#45556c]">
+                      Your account will receive{" "}
+                      <span className="font-semibold text-[#0f172b]">{freePromptsTotal} initial free prompts</span>
+                      {" "}to explore lead generation.
+                    </p>
+
+                    <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
+                      <p className="text-xs font-normal leading-[18px] text-[#475467]">
+                        You are provided with free prompts once this are utilized your account credits will start to consume
+                      </p>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           )}

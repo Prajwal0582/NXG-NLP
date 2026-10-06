@@ -12,15 +12,6 @@ interface LandingViewProps {
   onHistory: () => void;
 }
 
-function MicIcon() {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className="size-3.5" stroke="#6b7280" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z" />
-      <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
-      <line x1="12" y1="19" x2="12" y2="22" />
-    </svg>
-  );
-}
 
 function SendIcon({ active }: { active: boolean }) {
   return (
@@ -156,13 +147,7 @@ export default function LandingView({
                   rows={2}
                   className="flex-1 text-[15px] text-[#1d2939] placeholder:text-[#9ca3af] bg-transparent border-none outline-none resize-none pt-1.5 leading-snug"
                 />
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <button
-                    className="size-7 flex items-center justify-center rounded-md border border-[#e4e7ec] bg-white hover:bg-[#f9fafb] transition-colors"
-                    tabIndex={-1}
-                  >
-                    <MicIcon />
-                  </button>
+                <div className="flex items-center shrink-0">
                   <button
                     onClick={handleSend}
                     disabled={!canSend}

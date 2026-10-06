@@ -10,6 +10,7 @@ interface SidebarProps {
   onNavigate: (view: View) => void;
   isSubscriber: boolean;
   onPlans: () => void;
+  hasActiveChat?: boolean;
 }
 
 function SearchIcon() {
@@ -134,6 +135,7 @@ export default function Sidebar({
   onNavigate,
   isSubscriber,
   onPlans,
+  hasActiveChat,
 }: SidebarProps) {
   const isSearchActive =
     currentView === "landing" ||
@@ -202,8 +204,11 @@ export default function Sidebar({
                 isActive ? "bg-[#344054] text-white" : "text-white hover:bg-white/10"
               }`}
             >
-              <span className="flex items-start p-2">
+              <span className="relative flex items-start p-2">
                 <item.icon />
+                {item.id === "search" && hasActiveChat && !isActive && (
+                  <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#12b76a] ring-2 ring-[#1D2939]" />
+                )}
               </span>
               <span className="flex-1 text-base font-normal leading-[26px]">{item.label}</span>
               {item.badge === "gem" ? <GemBadge /> : null}
