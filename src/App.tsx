@@ -9,8 +9,14 @@ import FeedbackModal from "./components/FeedbackModal";
 import CreditConfirmModal from "./components/CreditConfirmModal";
 import Toast from "./components/Toast";
 import SaveListModal from "./components/SaveListModal";
-import SaveListGuidance from "./components/SaveListGuidance";
+import SaveListEducationTour from "./components/SaveListEducationTour";
 import CreditMilestoneModal from "./components/CreditMilestoneModal";
+import {
+  inferSearchDataset,
+  hasCompletedSavedListEducation,
+  markSavedListEducationComplete,
+  clearSavedListEducation,
+} from "./data/dataset";
 import WelcomeModal from "./components/WelcomeModal";
 
 import ScenarioLaunchView from "./views/ScenarioLaunchView";
@@ -60,6 +66,8 @@ export default function App() {
   const [submittedPrompt, setSubmittedPrompt] = useState("");
   const [skipAnimation, setSkipAnimation] = useState(false);
   const [listSaved, setListSaved] = useState(false);
+  /** True when the most recent freemium submit consumed the final free prompt. */
+  const [freePromptsJustExhausted, setFreePromptsJustExhausted] = useState(false);
 
   const [historyOpen, setHistoryOpen] = useState(false);
   const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
@@ -69,8 +77,8 @@ export default function App() {
   // Credit-cost coach tip is shown once per session for subscriber-credit.
   const [creditCoachSeen, setCreditCoachSeen] = useState(false);
   const [saveListModalOpen, setSaveListModalOpen] = useState(false);
-  const [saveGuidanceOpen, setSaveGuidanceOpen] = useState(false);
-  const [saveGuidanceSeen, setSaveGuidanceSeen] = useState(false);
+  const [saveCoachOpen, setSaveCoachOpen] = useState(false);
+  const [searchDataset, setSearchDataset] = useState<ActiveTab>("business");
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
 
@@ -111,6 +119,7 @@ export default function App() {
     setCreditsRemaining(getInitialCredits(s));
     setListSaved(false);
     setListPurchaseContext(null);
+    setFreePromptsJustExhausted(false);
     const isNewUser = (s === "freemium-20" || s === "subscriber-free") && promptsOverride === 20;
     setWelcomeModalOpen(isNewUser);
     setView("landing");
@@ -134,10 +143,21 @@ export default function App() {
     setSkipAnimation(false);
     setSubmittedPrompt("");
     setListPurchaseContext(null);
+    setFreePromptsJustExhausted(false);
     setView("landing");
   }
 
   function handleLogout() {
+    clearSavedListEducation();
+    setSaveCoachOpen(false);
+    setSaveListModalOpen(false);
+    setListSaved(false);
+    setJustSavedListName(null);
+    setSubmittedPrompt("");
+    setSearchDataset("business");
+    setActiveTab("business");
+    setListPurchaseContext(null);
+    setFreePromptsJustExhausted(false);
     setView("scenario-launch");
   }
 
@@ -156,12 +176,17 @@ export default function App() {
   function doSubmitPrompt(prompt: string) {
     setSkipAnimation(false);
     setSubmittedPrompt(prompt);
+    setSearchDataset(inferSearchDataset(prompt));
     setListPurchaseContext(null);
     setView("results"); // conversation view — no separate processing screen
 
-    if (prompt.trim() === "123") return;
+    if (prompt.trim() === "123") {
+      setFreePromptsJustExhausted(false);
+      return;
+    }
 
     if (scenario === "subscriber-credit") {
+      setFreePromptsJustExhausted(false);
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
       return;
@@ -172,30 +197,41 @@ export default function App() {
     if (!freeExhausted) {
       const after = promptsRemaining - 1;
       setPromptsRemaining(Math.max(0, after));
+      setFreePromptsJustExhausted(isFreemiumScenario(scenario) && after === 0);
       if (after <= 0 && scenario === "subscriber-free") {
         setMilestoneModalOpen(true);
       }
     } else if (isSub) {
+      setFreePromptsJustExhausted(false);
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
+    } else {
+      setFreePromptsJustExhausted(false);
     }
   }
 
   function handleSaveList() {
-    if (!saveGuidanceSeen) {
-      setSaveGuidanceOpen(true);
-    } else {
-      setSaveListModalOpen(true);
-    }
+    setSaveListModalOpen(true);
   }
 
   const [justSavedListName, setJustSavedListName] = useState<string | null>(null);
 
   function confirmSaveList(name: string) {
+    const showEducation = !hasCompletedSavedListEducation();
     setSaveListModalOpen(false);
     setListSaved(true);
     setJustSavedListName(name);
+    // Navigate to the search dataset's Saved lists. Do not reassign the list itself.
+    setActiveTab(searchDataset);
     setView("saved-lists");
+    if (showEducation) {
+      setSaveCoachOpen(true);
+    }
+  }
+
+  function completeSavedListEducation() {
+    markSavedListEducationComplete();
+    setSaveCoachOpen(false);
   }
 
   function handleFeedback(_positive: boolean) {
@@ -207,6 +243,7 @@ export default function App() {
     const freeExhausted = promptsRemaining <= 0;
     const isSub = !isFreemiumScenario(scenario);
     if (scenario === "subscriber-credit" || scenario === "subscriber-credit-0") {
+      setFreePromptsJustExhausted(false);
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
       return;
@@ -214,12 +251,16 @@ export default function App() {
     if (!freeExhausted) {
       const after = promptsRemaining - 1;
       setPromptsRemaining(Math.max(0, after));
+      setFreePromptsJustExhausted(isFreemiumScenario(scenario) && after === 0);
       if (after <= 0 && scenario === "subscriber-free") {
         setMilestoneModalOpen(true);
       }
     } else if (isSub) {
+      setFreePromptsJustExhausted(false);
       const after = Math.max(0, creditsRemaining - 2);
       setCreditsRemaining(after);
+    } else {
+      setFreePromptsJustExhausted(false);
     }
   }
 
@@ -379,6 +420,7 @@ export default function App() {
                 onFeedback={handleFeedback}
                 onFollowUp={handleFollowUp}
                 skipAnimation={skipAnimation}
+                freePromptsJustExhausted={freePromptsJustExhausted}
               />
             </div>
           )}
@@ -394,6 +436,8 @@ export default function App() {
             setHistoryOpen(false);
             setSkipAnimation(true);
             setSubmittedPrompt(prompt);
+            setSearchDataset(inferSearchDataset(prompt));
+            setFreePromptsJustExhausted(false);
             setView("results");
           }}
         />
@@ -420,27 +464,18 @@ export default function App() {
         />
       )}
 
-      {saveGuidanceOpen && (
-        <SaveListGuidance
-          activeTab={activeTab}
-          onComplete={() => {
-            setSaveGuidanceOpen(false);
-            setSaveGuidanceSeen(true);
-            setSaveListModalOpen(true);
-          }}
-          onDismiss={() => {
-            setSaveGuidanceOpen(false);
-            setSaveGuidanceSeen(true);
-          }}
-        />
-      )}
-
       {saveListModalOpen && (
         <SaveListModal
-          activeTab={activeTab}
+          searchDataset={searchDataset}
+          navDataset={activeTab}
+          isFirstSave={!hasCompletedSavedListEducation()}
           onConfirm={confirmSaveList}
           onCancel={() => setSaveListModalOpen(false)}
         />
+      )}
+
+      {saveCoachOpen && (
+        <SaveListEducationTour onComplete={completeSavedListEducation} />
       )}
 
       {milestoneModalOpen && (

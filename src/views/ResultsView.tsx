@@ -13,6 +13,7 @@ import {
   type ScenarioLead,
   type InsightBlock,
 } from "../data/searchScenarios";
+import illustrationAccuracyOrange from "../assets/illustration_accuracy_orange.png";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -29,6 +30,8 @@ interface Turn {
   invalid?: boolean;
   /** Snapshot of result payload when this turn completed (initial or refined). */
   resultSnapshot?: TurnResultPayload;
+  /** Appended once when this turn consumed the final free freemium prompt. */
+  showFreePromptsExhausted?: boolean;
 }
 
 interface TurnResultPayload {
@@ -71,6 +74,8 @@ interface ResultsViewProps {
   onFeedback: (positive: boolean) => void;
   onFollowUp: (p: string) => void;
   skipAnimation?: boolean;
+  /** Landing/first submit that just consumed the final free prompt. */
+  freePromptsJustExhausted?: boolean;
 }
 
 // ─── Processing steps ────────────────────────────────────────────────────────
@@ -632,6 +637,27 @@ function FeedbackRow({ onFeedback }: { onFeedback: (positive: boolean) => void }
   );
 }
 
+/** Concluding assistant message when the final free prompt was just used. */
+function FreePromptsExhaustedMessage() {
+  return (
+    <div className="mt-10 pt-8 border-t border-[#eaecf0] flex flex-col items-center text-center px-4 animate-fade-in">
+      <img
+        src={illustrationAccuracyOrange}
+        alt=""
+        width={160}
+        height={160}
+        className="w-[160px] max-w-[40%] h-auto mb-6 select-none"
+      />
+      <h3 className="text-[20px] font-semibold leading-[30px] text-g-gray-800 mb-2">
+        You&apos;re out of free prompts!
+      </h3>
+      <p className="text-[16px] font-normal leading-6 text-g-gray-600 max-w-md">
+        Upgrade your account to continue using Smart Search.
+      </p>
+    </div>
+  );
+}
+
 // ─── First-turn / refined result content ─────────────────────────────────────
 
 function ScenarioResultBody({
@@ -640,12 +666,14 @@ function ScenarioResultBody({
   onPurchaseList,
   onSave,
   onFeedback,
+  showFreePromptsExhausted = false,
 }: {
   payload: TurnResultPayload;
   isFreemium: boolean;
   onPurchaseList: (resultCount: number) => void;
   onSave: () => void;
   onFeedback: (positive: boolean) => void;
+  showFreePromptsExhausted?: boolean;
 }) {
   const [sourcesOpen, setSourcesOpen] = useState(false);
   const [thoughtOpen, setThoughtOpen] = useState(false);
@@ -752,9 +780,13 @@ function ScenarioResultBody({
 
       <FeedbackRow onFeedback={onFeedback} />
 
-      <p className="text-sm text-[#667085] mt-3 mb-1">
-        You can further refine these results or optimize your list by adding another prompt below.
-      </p>
+      {showFreePromptsExhausted ? (
+        <FreePromptsExhaustedMessage />
+      ) : (
+        <p className="text-sm text-[#667085] mt-3 mb-1">
+          You can further refine these results or optimize your list by adding another prompt below.
+        </p>
+      )}
     </div>
   );
 }
@@ -821,6 +853,7 @@ export default function ResultsView({
   onFeedback,
   onFollowUp,
   skipAnimation,
+  freePromptsJustExhausted = false,
 }: ResultsViewProps) {
   const [turns, setTurns] = useState<Turn[]>([]);
   const [followUpInput, setFollowUpInput] = useState("");
@@ -927,9 +960,9 @@ export default function ResultsView({
   // Add a turn and run its processing animation. When `frozen` (user is out of
   // prompts), the block is added greyed and stuck — no timers run, so it never
   // completes and no data is ever generated.
-  const addTurn = useCallback((p: string, frozen = false, invalid = false) => {
+  const addTurn = useCallback((p: string, frozen = false, invalid = false, showFreePromptsExhausted = false) => {
     const id = nextId.current++;
-    setTurns(prev => [...prev, { id, prompt: p, stepStatuses: ["waiting", "waiting", "waiting"], isComplete: false, frozen, invalid }]);
+    setTurns(prev => [...prev, { id, prompt: p, stepStatuses: ["waiting", "waiting", "waiting"], isComplete: false, frozen, invalid, showFreePromptsExhausted }]);
     if (frozen || invalid) {
       if (invalid) setTimeout(() => setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, isComplete: true })), 600);
       return;
@@ -959,23 +992,32 @@ export default function ResultsView({
     }, 3500);
   }, [searchScenario]);
 
-  const addTurnInstant = useCallback((p: string) => {
+  const addTurnInstant = useCallback((p: string, showFreePromptsExhausted = false) => {
     const id = nextId.current++;
     const sc = resolveScenario(p);
     const snapshot = buildInitialPayload(sc);
-    setTurns([{ id, prompt: p, stepStatuses: ["done", "done", "done"] as StepStatus[], isComplete: true, frozen: false, resultSnapshot: snapshot }]);
+    setTurns([{
+      id,
+      prompt: p,
+      stepStatuses: ["done", "done", "done"] as StepStatus[],
+      isComplete: true,
+      frozen: false,
+      resultSnapshot: snapshot,
+      showFreePromptsExhausted,
+    }]);
   }, []);
 
   // Boot first turn from the prompt prop — guard against Strict Mode double-invoke.
-  // If the user is already out of prompts (freemium-0), the turn is frozen: the
-  // system does not generate data because the prompt limit is finished.
+  // freemium-0 (already exhausted, not just-used-final): freeze — no results.
+  // Final free prompt just consumed: process normally and append exhausted message.
   useEffect(() => {
     if (booted.current) return;
     booted.current = true;
+    const shouldFreeze = isExhausted && !freePromptsJustExhausted;
     if (skipAnimation) {
-      addTurnInstant(prompt);
+      addTurnInstant(prompt, freePromptsJustExhausted);
     } else {
-      addTurn(prompt, isExhausted, prompt.trim() === "123");
+      addTurn(prompt, shouldFreeze, prompt.trim() === "123", freePromptsJustExhausted);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -985,11 +1027,12 @@ export default function ResultsView({
     prevPrompt.current = prompt;
     if (!booted.current) return;
     nextId.current = 0;
+    const shouldFreeze = isExhausted && !freePromptsJustExhausted;
     if (skipAnimation) {
-      addTurnInstant(prompt);
+      addTurnInstant(prompt, freePromptsJustExhausted);
     } else {
       setTurns([]);
-      addTurn(prompt, isExhausted, prompt.trim() === "123");
+      addTurn(prompt, shouldFreeze, prompt.trim() === "123", freePromptsJustExhausted);
     }
   }, [prompt, skipAnimation]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1001,8 +1044,9 @@ export default function ResultsView({
 
   // Silent send — deduct (via onFollowUp) + add the turn. Toast is handled in App.
   function sendPrompt(p: string) {
+    const exhaustedByThis = free && promptsRemaining === 1;
     onFollowUp(p);
-    addTurn(p);
+    addTurn(p, false, false, exhaustedByThis);
     setFollowUpInput("");
   }
 
@@ -1101,6 +1145,7 @@ export default function ResultsView({
                     onPurchaseList={onPurchaseList}
                     onSave={onSave}
                     onFeedback={onFeedback}
+                    showFreePromptsExhausted={!!turn.showFreePromptsExhausted}
                   />
                 ) : null}
               </div>

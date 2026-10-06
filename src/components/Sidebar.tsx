@@ -109,6 +109,16 @@ function GemBadge() {
   );
 }
 
+/** Live / active Search indicator — solid center + soft expanding ring. */
+function SearchActiveIndicator() {
+  return (
+    <span className="relative flex size-3 items-center justify-center" aria-hidden>
+      <span className="absolute size-3 rounded-full bg-g-green-500/45 animate-live-pulse-ring" />
+      <span className="relative size-2.5 rounded-full bg-g-green-500" />
+    </span>
+  );
+}
+
 interface NavItem {
   id: string;
   label: string;
@@ -135,7 +145,6 @@ export default function Sidebar({
   onNavigate,
   isSubscriber,
   onPlans,
-  hasActiveChat,
 }: SidebarProps) {
   const isSearchActive =
     currentView === "landing" ||
@@ -164,7 +173,10 @@ export default function Sidebar({
 
       {/* Business / Consumer toggle */}
       <div className="flex h-[60px] w-full items-center justify-center p-2">
-        <div className="flex w-[199px] items-center gap-0.5 rounded-full bg-[#344054] p-0.5">
+        <div
+          data-coach="dataset-toggle"
+          className="flex w-[199px] items-center gap-0.5 rounded-full bg-[#344054] p-0.5"
+        >
           <button
             type="button"
             onClick={() => onTabChange("business")}
@@ -195,23 +207,32 @@ export default function Sidebar({
         {navItems.map((item) => {
           const isActive =
             (item.id === "search" && isSearchActive) || (item.id === "saved-lists" && isListActive);
+          const isSearchItem = item.id === "search";
           return (
             <button
               key={item.id}
               type="button"
+              aria-current={isActive ? "page" : undefined}
+              data-coach={item.id === "saved-lists" ? "nav-saved-lists" : undefined}
               onClick={() => item.view && onNavigate(item.view)}
               className={`flex w-full items-center gap-2 rounded p-2 text-left transition-colors ${
                 isActive ? "bg-[#344054] text-white" : "text-white hover:bg-white/10"
               }`}
             >
-              <span className="relative flex items-start p-2">
-                <item.icon />
-                {item.id === "search" && hasActiveChat && !isActive && (
-                  <span className="absolute top-1.5 right-1.5 size-2 rounded-full bg-[#12b76a] ring-2 ring-[#1D2939]" />
-                )}
+              <span className="flex min-w-0 flex-1 items-center gap-2">
+                <span className="flex shrink-0 items-start p-2">
+                  <item.icon />
+                </span>
+                <span className="truncate text-base font-normal leading-[26px]">{item.label}</span>
               </span>
-              <span className="flex-1 text-base font-normal leading-[26px]">{item.label}</span>
-              {item.badge === "gem" ? <GemBadge /> : null}
+              {/* Fixed-width slot so Search label position does not shift active ↔ inactive */}
+              {isSearchItem ? (
+                <span className="flex size-3 shrink-0 items-center justify-center">
+                  {isActive ? <SearchActiveIndicator /> : null}
+                </span>
+              ) : item.badge === "gem" ? (
+                <GemBadge />
+              ) : null}
             </button>
           );
         })}
