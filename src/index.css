@@ -3,6 +3,29 @@
 
 @theme {
   --font-inter: 'Inter', sans-serif;
+
+  /* Genie Material Design — Primary / Blue */
+  --color-g-blue-50: #f1f9fd;
+  --color-g-blue-100: #e5f3fc;
+  --color-g-blue-200: #cae6f9;
+  --color-g-blue-600: #008dc3;
+  --color-g-blue-700: #00729f;
+
+  /* Genie Material Design — Primary / Gray */
+  --color-g-gray-50: #f9fafb;
+  --color-g-gray-100: #f2f4f7;
+  --color-g-gray-200: #eaecf0;
+  --color-g-gray-300: #d0d5dd;
+  --color-g-gray-400: #98a2b3;
+  --color-g-gray-500: #667085;
+  --color-g-gray-600: #475467;
+  --color-g-gray-700: #344054;
+  --color-g-gray-800: #1d2939;
+
+  --color-g-orange-50: #fff6f2;
+  --color-g-orange-200: #fedbcd;
+  --color-g-orange-600: #c55418;
+  --color-g-white: #ffffff;
 }
 
 * {

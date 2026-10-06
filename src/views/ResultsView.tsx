@@ -495,12 +495,11 @@ function ActionBanner({ totalLeads, onSave, onPurchaseList }: {
 // ─── Feedback row (inline) ───────────────────────────────────────────────────
 
 const FEEDBACK_CATEGORIES = [
-  "Wrong or irrelevant leads",
-  "Filters not applied correctly",
-  "Lead count looks off",
-  "Insights not useful",
-  "Too slow",
-  "Other",
+  "Results are not relevant to my search",
+  "Missing key information",
+  "Too many or too few results",
+  "Insights are not helpful",
+  "Other (please specify below)",
 ];
 
 function FeedbackModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: () => void }) {
@@ -536,9 +535,9 @@ function FeedbackModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
         </div>
 
         {/* Title */}
-        <h3 className="text-lg font-semibold text-[#101828] text-center mb-2">Help us Improve your Experience</h3>
+        <h3 className="text-lg font-semibold text-[#101828] text-center mb-2">Help us improve your experience</h3>
         <p className="text-sm text-[#475467] text-center mb-6 leading-relaxed">
-          Your feedback, this prompt and the response are shared with our Product Support team to improve Smart Search.
+          Your feedback helps our Product Support team improve Smart Search and provide more relevant results.
         </p>
 
         {/* Checkboxes */}
@@ -573,7 +572,7 @@ function FeedbackModal({ onClose, onSubmit }: { onClose: () => void; onSubmit: (
         <textarea
           value={comment}
           onChange={(e) => setComment(e.target.value)}
-          placeholder="Tell us more"
+          placeholder="Tell us more (optional)"
           className="w-full h-[100px] bg-white border border-[#d0d5dd] rounded-lg px-3.5 py-3 text-sm text-[#1d2939] placeholder:text-[#667085] focus:outline-none focus:border-[#008dc3] focus:ring-1 focus:ring-[#008dc3] resize-none mb-6"
         />
 

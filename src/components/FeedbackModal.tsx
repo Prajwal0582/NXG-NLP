@@ -6,10 +6,11 @@ interface FeedbackModalProps {
 }
 
 const REASONS = [
-  "Results are not relevant to my business",
-  "The recommendations are too broad",
-  "The recommendations are too narrow",
-  "Other",
+  "Results are not relevant to my search",
+  "Missing key information",
+  "Too many or too few results",
+  "Insights are not helpful",
+  "Other (please specify below)",
 ];
 
 export default function FeedbackModal({ onClose, onSubmit }: FeedbackModalProps) {

@@ -13,10 +13,25 @@ interface TopHeaderProps {
   onPlans: () => void;
 }
 
-function LightningIcon({ className = "size-3", fill = "#016dee" }: { className?: string; fill?: string }) {
+function LightningIcon({ className = "size-3", fill = "#008dc3" }: { className?: string; fill?: string }) {
   return (
     <svg viewBox="0 0 12 14" fill="none" className={`shrink-0 ${className}`}>
       <path d="M7 1L1 8h5l-1 5 6-7H6L7 1Z" fill={fill} />
+    </svg>
+  );
+}
+
+function SparklePair() {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className="size-5 shrink-0 text-g-blue-600">
+      <path
+        d="M7.5 2.5c0 0 1.05 3.4 2.7 4.55C11.85 8.2 12.5 8.5 12.5 8.5s-.65.3-2.3 1.45C8.55 11.1 7.5 14.5 7.5 14.5s-1.05-3.4-2.7-4.55C3.15 8.8 2.5 8.5 2.5 8.5s.65-.3 2.3-1.45C6.45 5.9 7.5 2.5 7.5 2.5Z"
+        fill="currentColor"
+      />
+      <path
+        d="M14.5 9.5c0 0 .6 1.95 1.55 2.6.95.65 1.45.9 1.45.9s-.5.25-1.45.9c-.95.65-1.55 2.6-1.55 2.6s-.6-1.95-1.55-2.6c-.95-.65-1.45-.9-1.45-.9s.5-.25 1.45-.9c.95-.65 1.55-2.6 1.55-2.6Z"
+        fill="currentColor"
+      />
     </svg>
   );
 }
@@ -53,88 +68,90 @@ export default function TopHeader({
   useClickOutside(avatarRef, () => setAvatarOpen(false));
 
   const isCredit = scenario === "subscriber-credit" || scenario === "subscriber-credit-0";
-  const pct = Math.max(0, (promptsRemaining / freePromptsTotal) * 100);
-  // "5 and less prompts left" is the low-balance warning state (amber).
-  const isLow = !isCredit && promptsRemaining <= 5 && isFreemium;
+  const showPromptAllowance = promptsRemaining > 0;
+  const promptPct = Math.max(0, (promptsRemaining / freePromptsTotal) * 100);
+  const isLow = isFreemium && promptsRemaining <= 5;
+
+  useEffect(() => {
+    if (!showPromptAllowance) setPillOpen(false);
+  }, [showPromptAllowance]);
 
   return (
-    <header className="bg-white h-14 flex items-center px-6 shrink-0 border-b border-[#eaecf0] relative z-30">
+    <header className="bg-g-white h-14 flex items-center px-6 shrink-0 border-b border-g-gray-200 relative z-30">
       <div className="flex-1" />
 
-      {/* ── Prompt/credit pill ───────────────────────────────────────── */}
-      {isCredit ? (
-        <div className="mr-3" />
-      ) : promptsRemaining > 0 || isFreemium ? (
-        /* Prompt allowance pill for freemium / subscriber-free with prompts */
-        <div ref={pillRef} className="relative mr-3">
-          <button
-            onClick={() => { setPillOpen((o) => !o); setAvatarOpen(false); }}
-            className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-[12px] font-normal leading-[18px] border transition-colors ${
-              isLow
-                ? "bg-[#fffaeb] border-[#fedf89] text-[#b54708] hover:bg-[#fef3c7]"
-                : "bg-[#f1f9fd] border-[#cae6f9] text-[#344054] hover:bg-[#e0f2fe]"
-            }`}
-          >
-            <span>Free prompts: {promptsRemaining} of {freePromptsTotal}</span>
-            <div className="w-16 h-1.5 bg-[#e4e7ec] rounded-full overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-all ${isLow ? "bg-[#f79009]" : "bg-[#008dc3]"}`}
-                style={{ width: `${pct}%` }}
-              />
+      {/* Free-prompt allowance only. Hidden after prompts are used (incl. credit users). */}
+      {showPromptAllowance && (
+      <div ref={pillRef} className="relative mr-3">
+        <button
+          onClick={() => { setPillOpen((o) => !o); setAvatarOpen(false); }}
+          className={`flex items-center gap-2.5 px-3 py-1.5 rounded-full text-[12px] font-normal leading-[18px] border transition-colors ${
+            isLow
+              ? "bg-g-orange-50 border-g-orange-200 text-g-orange-600 hover:bg-g-orange-50"
+              : "bg-g-blue-50 border-g-blue-200 text-g-gray-700 hover:bg-g-blue-100"
+          }`}
+        >
+          <span>Free prompts: {promptsRemaining} of {freePromptsTotal}</span>
+          <div className="w-16 h-1.5 bg-g-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${isLow ? "bg-g-orange-600" : "bg-g-blue-600"}`}
+              style={{ width: `${promptPct}%` }}
+            />
+          </div>
+        </button>
+
+        {pillOpen && (
+          <div className="absolute right-0 top-full mt-2 w-[360px] bg-g-white rounded-xl border border-g-gray-200 shadow-[0px_4px_8px_-2px_rgba(16,24,40,0.1),0px_2px_4px_-2px_rgba(16,24,40,0.06)] z-50 p-5 animate-fade-in">
+            <div className="flex items-center justify-between gap-3 mb-4">
+              <p className="text-[16px] font-semibold leading-6 text-g-gray-800">
+                AI Prompt Allowance
+              </p>
+              <span className="shrink-0 rounded-full bg-g-blue-50 px-2.5 py-0.5 text-[12px] font-medium leading-[18px] text-g-blue-700">
+                {isFreemium ? "Free account" : "Subscriber"}
+              </span>
             </div>
-          </button>
 
-          {pillOpen && (
-            <div className="absolute right-0 top-full mt-2 w-[358px] bg-white rounded-xl border border-[#eaecf0] shadow-[0px_0px_0px_rgba(71,84,103,0.04),0px_3px_7px_rgba(71,84,103,0.04),0px_12px_12px_rgba(71,84,103,0.03),0px_27px_16px_rgba(71,84,103,0.02),0px_49px_19px_rgba(71,84,103,0.01),0px_76px_21px_rgba(71,84,103,0)] z-50 p-4 animate-fade-in">
-              {/* Header row */}
-              <div className="flex items-center justify-between pb-2 border-b border-[#f1f5f9]">
-                <p className="text-xs font-medium leading-[18px] text-[#0f172b]">AI Prompt Allowance</p>
-                <p className="text-xs font-normal leading-[18px] text-[#62748e]">{isFreemium ? "Freemium" : "Subscribed"}</p>
-              </div>
-
-              {/* Body */}
-              <div className="pt-3">
-                {isFreemium ? (
-                  <>
-                    <p className="text-xs font-medium leading-[18px] text-[#45556c]">
-                      You have{" "}
-                      <span className="font-semibold text-[#0f172b]">{freePromptsTotal} free prompts</span>
-                      {" "}to explore lead generation.
-                    </p>
-
-                    <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
-                      <p className="text-xs font-normal leading-[18px] text-[#475467]">
-                        Upgrade to get more prompts and unlock full access.
-                      </p>
-                    </div>
-
-                    <button
-                      onClick={() => { setPillOpen(false); onPlans(); }}
-                      className="w-full mt-2 bg-[#008dc3] border border-[#008dc3] text-white text-[14px] font-medium leading-[20px] py-1.5 px-3 rounded-md hover:bg-[#007aab] transition-colors"
-                    >
-                      Upgrade account
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <p className="text-xs font-medium leading-[18px] text-[#45556c]">
-                      Your account will receive{" "}
-                      <span className="font-semibold text-[#0f172b]">{freePromptsTotal} initial free prompts</span>
-                      {" "}to explore lead generation.
-                    </p>
-
-                    <div className="mt-2 bg-[#f9fafb] border border-[#eaecf0] rounded-lg p-4">
-                      <p className="text-xs font-normal leading-[18px] text-[#475467]">
-                        You are provided with free prompts once this are utilized your account credits will start to consume
-                      </p>
-                    </div>
-                  </>
-                )}
-              </div>
-            </div>
-          )}
-        </div>
-      ) : null}
+            {isFreemium ? (
+              <>
+                <p className="text-[20px] font-semibold leading-[30px] text-g-gray-800">
+                  {promptsRemaining} of {freePromptsTotal} free prompts remaining
+                </p>
+                <p className="mt-1 text-[14px] font-normal leading-5 text-g-gray-600">
+                  Use your free prompts to explore and find leads with AI.
+                </p>
+                <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-g-blue-50 px-3.5 py-3">
+                  <SparklePair />
+                  <p className="text-[14px] font-normal leading-5 text-g-gray-800">
+                    Upgrade for unlimited AI prompts and full access.
+                  </p>
+                </div>
+                <button
+                  onClick={() => { setPillOpen(false); onPlans(); }}
+                  className="mt-4 w-full rounded-lg bg-g-blue-600 py-2.5 text-[16px] font-semibold leading-6 text-g-white hover:bg-g-blue-700 transition-colors"
+                >
+                  Upgrade account
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-[20px] font-semibold leading-[30px] text-g-gray-800">
+                  {promptsRemaining} of {freePromptsTotal} free prompts remaining
+                </p>
+                <p className="mt-1 text-[14px] font-normal leading-5 text-g-gray-600">
+                  Use your free prompts to explore and find leads with AI.
+                </p>
+                <div className="mt-4 flex items-center gap-2.5 rounded-lg bg-g-blue-50 px-3.5 py-3">
+                  <SparklePair />
+                  <p className="text-[14px] font-normal leading-5 text-g-gray-800">
+                    After this allowance, each AI search costs 2 credits.
+                  </p>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
+      )}
 
       {/* ── Profile avatar + dropdown ─────────────────────────────────── */}
       <div ref={avatarRef} className="relative">
