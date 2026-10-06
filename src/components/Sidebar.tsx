@@ -155,7 +155,7 @@ export default function Sidebar({
     currentView === "plans" ||
     currentView === "subscription-checkout";
   const isListActive = currentView === "saved-lists";
-  // Conversation session — not route. ON when a Smart Search chat has ≥1 submitted prompt.
+  // Conversation session — ON as soon as a prompt is submitted (incl. while generating), not when results finish.
   const hasActiveSmartSearchConversation = hasActiveChat;
 
   return (

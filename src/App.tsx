@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { flushSync } from "react-dom";
 import type { View, UserScenario, ActiveTab, BillingPeriod, SelectedPlanId, ListPurchaseContext } from "./types";
 import { buildListPurchaseContext } from "./data/searchScenarios";
 
@@ -129,19 +130,34 @@ export default function App() {
     applyScenario(s);
   }
 
-  const hasActiveChat = submittedPrompt.length > 0;
+  // Active Smart Search conversation = at least one submitted (non-draft) user prompt.
+  // Set on submit — does not wait for processing/results to finish.
+  const hasActiveSmartSearchConversation = submittedPrompt.trim().length > 0;
 
   function handleNavigate(v: View) {
-    if (v === "landing" && hasActiveChat) {
+    if (v === "landing" && hasActiveSmartSearchConversation) {
       setView("results");
       return;
     }
     setView(v);
   }
 
+  /** Mark conversation active immediately so the Search nav indicator paints before ResultsView work. */
+  function beginSmartSearchConversation(prompt: string) {
+    flushSync(() => {
+      setSubmittedPrompt(prompt);
+    });
+  }
+
+  function endSmartSearchConversation() {
+    flushSync(() => {
+      setSubmittedPrompt("");
+    });
+  }
+
   function handleNewChat() {
     setSkipAnimation(false);
-    setSubmittedPrompt("");
+    endSmartSearchConversation();
     setListPurchaseContext(null);
     setFreePromptsJustExhausted(false);
     setView("landing");
@@ -153,7 +169,7 @@ export default function App() {
     setSaveListModalOpen(false);
     setListSaved(false);
     setJustSavedListName(null);
-    setSubmittedPrompt("");
+    endSmartSearchConversation();
     setSearchDataset("business");
     setActiveTab("business");
     setListPurchaseContext(null);
@@ -175,7 +191,8 @@ export default function App() {
 
   function doSubmitPrompt(prompt: string) {
     setSkipAnimation(false);
-    setSubmittedPrompt(prompt);
+    // Indicator ON at submit — before ResultsView mounts / processing completes.
+    beginSmartSearchConversation(prompt);
     setSearchDataset(inferSearchDataset(prompt));
     setListPurchaseContext(null);
     setView("results"); // conversation view — no separate processing screen
@@ -379,7 +396,7 @@ export default function App() {
         onNavigate={handleNavigate}
         isSubscriber={!isFree}
         onPlans={() => openPlans("landing")}
-        hasActiveChat={hasActiveChat}
+        hasActiveChat={hasActiveSmartSearchConversation}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -396,7 +413,7 @@ export default function App() {
         />
         <div className="flex-1 overflow-hidden bg-white relative">
           {/* ResultsView stays mounted to preserve chat state across tab switches */}
-          {hasActiveChat && (
+          {hasActiveSmartSearchConversation && (
             <div className={`absolute inset-0 ${view === "results" ? "" : "hidden"}`}>
               <ResultsView
                 scenario={scenario}
@@ -435,7 +452,8 @@ export default function App() {
           onSelectHistory={(prompt) => {
             setHistoryOpen(false);
             setSkipAnimation(true);
-            setSubmittedPrompt(prompt);
+            // Opening history is an active conversation — indicator ON immediately.
+            beginSmartSearchConversation(prompt);
             setSearchDataset(inferSearchDataset(prompt));
             setFreePromptsJustExhausted(false);
             setView("results");
