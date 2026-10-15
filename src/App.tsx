@@ -12,6 +12,7 @@ import Toast from "./components/Toast";
 import SaveListModal from "./components/SaveListModal";
 import SaveListEducationTour from "./components/SaveListEducationTour";
 import CreditMilestoneModal from "./components/CreditMilestoneModal";
+import CreditBalanceEducationTour from "./components/CreditBalanceEducationTour";
 import {
   inferSearchDataset,
   hasCompletedSavedListEducation,
@@ -81,6 +82,7 @@ export default function App() {
   const [saveCoachOpen, setSaveCoachOpen] = useState(false);
   const [searchDataset, setSearchDataset] = useState<ActiveTab>("business");
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
+  const [creditEducationOpen, setCreditEducationOpen] = useState(false);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
 
   const [freeTotal, setFreeTotal] = useState(20);
@@ -410,6 +412,8 @@ export default function App() {
           reservedCredits={reservedCredits}
           onLogout={handleLogout}
           onPlans={() => openPlans("landing")}
+          creditEducationOpen={creditEducationOpen}
+          onCreditEducationDone={() => setCreditEducationOpen(false)}
         />
         <div className="flex-1 overflow-hidden bg-white relative">
           {/* ResultsView stays mounted to preserve chat state across tab switches */}
@@ -496,11 +500,15 @@ export default function App() {
         <SaveListEducationTour onComplete={completeSavedListEducation} />
       )}
 
+      {creditEducationOpen && (
+        <CreditBalanceEducationTour onComplete={() => setCreditEducationOpen(false)} />
+      )}
+
       {milestoneModalOpen && (
         <CreditMilestoneModal
           freePromptsTotal={freeTotal}
-          onContinue={() => setMilestoneModalOpen(false)}
-          onViewBalance={() => setMilestoneModalOpen(false)}
+          onContinue={() => { setMilestoneModalOpen(false); setCreditEducationOpen(true); }}
+          onViewBalance={() => { setMilestoneModalOpen(false); setCreditEducationOpen(true); }}
         />
       )}
 
