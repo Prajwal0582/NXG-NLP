@@ -30,6 +30,7 @@ import PurchaseView from "./views/PurchaseView";
 import PurchaseSuccessView from "./views/PurchaseSuccessView";
 import PlansView from "./views/PlansView";
 import SubscriptionCheckoutView from "./views/SubscriptionCheckoutView";
+import AdminView from "./views/AdminView";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
@@ -289,7 +290,7 @@ export default function App() {
     switch (view) {
       case "scenario-launch":
         return (
-          <ScenarioLaunchView onSelectScenario={applyScenario} />
+          <ScenarioLaunchView onSelectScenario={applyScenario} onAdminControls={() => setView("admin")} />
         );
 
       case "landing":
@@ -372,6 +373,14 @@ export default function App() {
           />
         );
 
+      case "admin":
+        return (
+          <AdminView
+            onBack={() => setView("scenario-launch")}
+            onToast={(message) => setToast({ message, type: "success" })}
+          />
+        );
+
       default:
         return null;
     }
@@ -399,10 +408,11 @@ export default function App() {
         isSubscriber={!isFree}
         onPlans={() => openPlans("landing")}
         hasActiveChat={hasActiveSmartSearchConversation}
+        adminMode={view === "admin"}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopHeader
+        {view !== "admin" && <TopHeader
           scenario={scenario}
           onScenarioChange={handleScenarioChange}
           promptsRemaining={promptsRemaining}
@@ -414,7 +424,7 @@ export default function App() {
           onPlans={() => openPlans("landing")}
           creditEducationOpen={creditEducationOpen}
           onCreditEducationDone={() => setCreditEducationOpen(false)}
-        />
+        />}
         <div className="flex-1 overflow-hidden bg-white relative">
           {/* ResultsView stays mounted to preserve chat state across tab switches */}
           {hasActiveSmartSearchConversation && (
@@ -429,6 +439,7 @@ export default function App() {
                 showCreditCoach={false}
                 onDismissCreditCoach={() => setCreditCoachSeen(true)}
                 onBack={() => setView("landing")}
+                onManualSearch={() => setView("manual-search")}
                 onNewChat={handleNewChat}
                 onHistory={() => setHistoryOpen(true)}
                 onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}

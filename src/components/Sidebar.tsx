@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import type { ActiveTab, View } from "../types";
 import dataAxleLogo from "../assets/data-axle-logo.svg";
 import salesgenieWordmark from "../assets/salesgenie-wordmark.svg";
@@ -11,6 +11,48 @@ interface SidebarProps {
   isSubscriber: boolean;
   onPlans: () => void;
   hasActiveChat?: boolean;
+  adminMode?: boolean;
+}
+
+const ADMIN_ITEMS = ["Accounts", "Users", "Manage Admin", "Reports"];
+
+function AdminGroup({ onNavigate }: { onNavigate: (view: View) => void }) {
+  const [open, setOpen] = useState(true);
+  return (
+    <div className="flex flex-col gap-2 py-[19px]">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex h-[52px] w-full items-center gap-2 rounded-lg bg-[#0a111a] px-4 py-2 text-left text-white"
+      >
+        <svg viewBox="0 0 24 24" fill="none" className="size-4 shrink-0" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="3" />
+          <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 01-2.83 2.83l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
+        </svg>
+        <span className="flex-1 text-sm leading-[21px] tracking-[0.14px]">Admin</span>
+        <svg viewBox="0 0 12 12" fill="none" className={`size-3 shrink-0 transition-transform ${open ? "" : "-rotate-90"}`} stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 4.5l3 3 3-3" />
+        </svg>
+      </button>
+      {open &&
+        ADMIN_ITEMS.map((label) => {
+          const active = label === "Accounts";
+          return (
+            <button
+              key={label}
+              type="button"
+              aria-current={active ? "page" : undefined}
+              onClick={() => active && onNavigate("admin")}
+              className={`flex h-[52px] w-full items-center rounded-lg px-4 py-2 text-left text-base leading-[21px] tracking-[0.16px] text-white transition-colors ${
+                active ? "border border-g-gray-600 bg-g-gray-700" : "hover:bg-white/10"
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
+    </div>
+  );
 }
 
 function SearchIcon() {
@@ -146,6 +188,7 @@ export default function Sidebar({
   isSubscriber,
   onPlans,
   hasActiveChat = false,
+  adminMode = false,
 }: SidebarProps) {
   const isSearchActive =
     currentView === "landing" ||
@@ -239,10 +282,12 @@ export default function Sidebar({
             </button>
           );
         })}
+        {adminMode && <AdminGroup onNavigate={onNavigate} />}
       </nav>
 
       {/* Bottom section */}
       <div className="mt-auto flex w-full flex-col gap-3">
+        {adminMode ? null : <>
         {!isSubscriber && (
           <div className="px-4">
             <div className="flex w-full flex-col rounded-lg border border-[#98A2B3] bg-[#475467] p-4">
@@ -280,6 +325,7 @@ export default function Sidebar({
             hiral.saini@data-axle.com
           </p>
         </div>
+        </>}
 
         <div className="flex items-start justify-center p-2">
           <p className="text-xs font-normal leading-[18px] whitespace-nowrap text-[#98A2B3]">

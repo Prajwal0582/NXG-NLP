@@ -83,6 +83,7 @@ const CARDS: ScenarioCard[] = [
 
 interface Props {
   onSelectScenario: (s: UserScenario, promptsOverride?: number) => void;
+  onAdminControls: () => void;
 }
 
 function FreemiumBadge() {
@@ -127,7 +128,7 @@ function SalesGenieLogo() {
   );
 }
 
-export default function ScenarioLaunchView({ onSelectScenario }: Props) {
+export default function ScenarioLaunchView({ onSelectScenario, onAdminControls }: Props) {
   const freemiumCards = CARDS.filter((c) => c.badge === "freemium");
   const subscriberCards = CARDS.filter((c) => c.badge === "subscriber");
 
@@ -177,7 +178,7 @@ export default function ScenarioLaunchView({ onSelectScenario }: Props) {
           </div>
 
           {/* Subscriber section */}
-          <div>
+          <div className="mb-10">
             <div className="flex items-center gap-3 mb-4">
               <h2 className="text-xs font-semibold text-[#667085] uppercase tracking-widest">Subscriber</h2>
               <div className="flex-1 h-px bg-[#eaecf0]" />
@@ -190,6 +191,40 @@ export default function ScenarioLaunchView({ onSelectScenario }: Props) {
                   onSelect={() => onSelectScenario(card.id, card.promptsOverride)}
                 />
               ))}
+            </div>
+          </div>
+
+          {/* Internal / Admin Controls section */}
+          <div>
+            <div className="flex items-center gap-3 mb-4">
+              <h2 className="text-xs font-semibold text-[#667085] uppercase tracking-widest">Internal / Admin Controls</h2>
+              <div className="flex-1 h-px bg-[#eaecf0]" />
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <button
+                onClick={onAdminControls}
+                className="group text-left w-full rounded-xl border border-[#e4e7ec] bg-white p-5 transition-all hover:shadow-md hover:border-[#667085] hover:bg-[#f9fafb] focus:outline-none focus:ring-2 focus:ring-[#016dee]/30"
+              >
+                <div className="mb-3">
+                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#f2f4f7] text-[#475467] border border-[#e4e7ec]">
+                    Admin
+                  </span>
+                </div>
+                <h3 className="text-sm font-semibold text-[#1d2939] mb-3 leading-snug">
+                  Super Admin Controls
+                </h3>
+                <ul className="space-y-1.5 mb-5">
+                  <li className="flex items-start gap-1.5 text-xs text-[#475467]"><CheckIcon />Account Settings with NLP on/off toggle</li>
+                  <li className="flex items-start gap-1.5 text-xs text-[#475467]"><CheckIcon />Credits management & user table</li>
+                  <li className="flex items-start gap-1.5 text-xs text-[#475467]"><CheckIcon />"Add free prompts" modal (working)</li>
+                </ul>
+                <div className="text-xs font-semibold flex items-center gap-1 text-[#344054] group-hover:text-[#1d2939] transition-colors">
+                  Open admin panel
+                  <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M3 7h8M8 4l3 3-3 3" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </div>
+              </button>
             </div>
           </div>
 

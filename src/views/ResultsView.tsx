@@ -68,6 +68,7 @@ interface ResultsViewProps {
   showCreditCoach: boolean;
   onDismissCreditCoach: () => void;
   onBack: () => void;
+  onManualSearch: () => void;
   onNewChat: () => void;
   onHistory: () => void;
   onPurchaseList: (resultCount: number) => void;
@@ -924,6 +925,7 @@ export default function ResultsView({
   showCreditCoach,
   onDismissCreditCoach,
   onBack,
+  onManualSearch,
   onNewChat,
   onHistory,
   onPurchaseList,
@@ -938,7 +940,7 @@ export default function ResultsView({
   const [turns, setTurns] = useState<Turn[]>([]);
   const [followUpInput, setFollowUpInput] = useState("");
   // Smart-friction confirm shown only when the credit balance is low.
-  const [lowBalancePrompt, setLowBalancePrompt] = useState<string | null>(null);
+  const [lowBalanceDismissed, setLowBalanceDismissed] = useState(false);
 
   const nextId = useRef(0);
   const booted = useRef(false);
@@ -1160,18 +1162,7 @@ export default function ResultsView({
       setFollowUpInput("");
       return;
     }
-    if (isCreditMode) {
-      if (isLowCredit) { setLowBalancePrompt(trimmed); return; }
-      sendPrompt(trimmed);
-      return;
-    }
     sendPrompt(trimmed);
-  }
-
-  function handleLowBalanceContinue() {
-    if (!lowBalancePrompt) return;
-    sendPrompt(lowBalancePrompt);
-    setLowBalancePrompt(null);
   }
 
   function handleRetry(turnPrompt: string) {
@@ -1237,7 +1228,7 @@ export default function ResultsView({
                 {turn.timedOut ? (
                   <TimeoutErrorState
                     onRetry={() => handleRetry(turn.prompt)}
-                    onManualSearch={onBack}
+                    onManualSearch={onManualSearch}
                   />
                 ) : turn.invalid && turn.isComplete ? (
                   <div className="animate-fade-in mt-3">
@@ -1276,27 +1267,29 @@ export default function ResultsView({
       <div className="shrink-0 bg-white border-t border-[#eaecf0] shadow-[0_-4px_20px_rgba(0,0,0,0.07)]">
         <div className="mx-auto py-4 relative max-w-[1150px] px-4">
 
-          {/* Smart-friction: low-balance confirm (only when credits are low) */}
-          {lowBalancePrompt && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 animate-fade-in">
-              <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl shadow-lg px-4 py-3.5 flex items-center justify-between gap-4">
-                <div className="flex items-start gap-2.5">
-                  <span className="mt-0.5"><LightningIcon /></span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#1d2939]">Low balance — {creditsRemaining} credits left</p>
-                    <p className="text-xs text-[#475467] mt-0.5">This prompt uses 2 credits.</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => { setLowBalancePrompt(null); onBuyCredits(); }} className="px-3.5 py-1.5 text-xs font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">Top up</button>
-                  <button onClick={handleLowBalanceContinue} className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#016dee] hover:bg-[#0052cc] rounded-lg transition-colors">Continue</button>
-                </div>
+          {/* Subscriber low-balance bar */}
+          {isLowCredit && !isCreditExhausted && !lowBalanceDismissed && (
+            <div className="flex items-center justify-between gap-3 bg-[#344054] rounded-lg px-5 py-3 mb-2">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#d0d5dd" strokeWidth="1.5">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-white">Low balance · {creditsRemaining} credits left</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <button onClick={onBuyCredits} className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors whitespace-nowrap">Buy credits</button>
+                <button onClick={() => setLowBalanceDismissed(true)} aria-label="Dismiss" className="text-[#d0d5dd] hover:text-white transition-colors">
+                  <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M3 3l8 8M11 3l-8 8" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
             </div>
           )}
 
           {/* First-prompt coach tip (once per session, subscriber-credit only) */}
-          {isCredit && showCreditCoach && !lowBalancePrompt && (
+          {isCredit && showCreditCoach && !isLowCredit && (
             <div className="absolute bottom-full right-4 mb-2 w-72 animate-fade-in">
               <div className="bg-[#1d2939] text-white rounded-xl shadow-xl px-4 py-3">
                 <div className="flex items-start gap-2.5">
@@ -1311,54 +1304,53 @@ export default function ResultsView({
             </div>
           )}
 
-          {/* Freemium low-balance inline alert */}
+          {/* Freemium low-balance bar */}
           {isLowPrompt && !isExhausted && (
-            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="8" cy="8" r="6.5" />
-                    <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
-                  </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">{promptsRemaining} free prompts remaining.</p>
-                </div>
-                <p className="text-sm text-[#b54708] ml-6">Upgrade for unlimited access to this feature.</p>
+            <div className="flex items-center justify-between gap-3 bg-[#1d2939] rounded-lg px-5 py-3 mb-2">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#98a2b3" strokeWidth="1.5">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-white"><span className="font-semibold">{promptsRemaining} free prompts remaining.</span> <span className="text-[#d0d5dd]">Upgrade for unlimited access to this feature.</span></p>
               </div>
-              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
+              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
             </div>
           )}
 
-          {/* Freemium exhausted inline alert */}
+          {/* Freemium exhausted bar */}
           {free && promptsRemaining <= 0 && (
-            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="8" cy="8" r="6.5" />
-                    <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
-                  </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
-                </div>
-                <p className="text-sm text-[#b54708] ml-6">Upgrade for unlimited access to this feature.</p>
+            <div className="flex items-center justify-between gap-3 bg-[#1d2939] rounded-lg px-5 py-3 mb-2">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#98a2b3" strokeWidth="1.5">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-white"><span className="font-semibold">0 free prompts left.</span> <span className="text-[#d0d5dd]">Upgrade for unlimited access to this feature.</span></p>
               </div>
-              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={onManualSearch} className="px-4 py-2 text-sm font-semibold text-white border border-[#475467] rounded-lg hover:bg-[#344054] transition-colors whitespace-nowrap">Go to manual search</button>
+                <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors whitespace-nowrap">Upgrade account</button>
+              </div>
             </div>
           )}
 
-          {/* Subscriber credits exhausted inline alert */}
+          {/* Subscriber credits exhausted bar */}
           {isCreditExhausted && (
-            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
+            <div className="flex items-center gap-1 bg-g-gray-700 border border-g-gray-500 rounded-lg p-4 mb-2">
+              <div className="flex flex-1 min-w-0 flex-col gap-1">
+                <div className="flex items-start gap-2">
+                  <svg viewBox="0 0 16 16" fill="none" className="size-3.5 shrink-0 mt-0.5" stroke="white" strokeWidth="1.5">
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
                   </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">Insufficient credit balance</p>
+                  <p className="text-xs font-medium leading-[18px] text-white">Insufficient credit balance</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your account credits have been exhausted. Purchase more credits to continue using Smart search.</p>
+                <p className="text-xs leading-[18px] text-g-gray-300">Your account credits have been exhausted. Purchase more credits to continue using Smart search.</p>
               </div>
-              <button onClick={onBuyCredits} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
+              <div className="px-2 shrink-0">
+                <button onClick={onBuyCredits} className="px-3 py-1.5 text-sm leading-5 text-white bg-g-blue-600 border border-g-blue-600 hover:bg-g-blue-700 rounded-md transition-colors whitespace-nowrap">Buy credits</button>
+              </div>
             </div>
           )}
 
