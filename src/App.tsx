@@ -366,9 +366,20 @@ export default function App() {
             planId={selectedPlan}
             billing={selectedBilling}
             onBack={() => setView("plans")}
-            onComplete={() => {
-              setToast({ message: `${selectedPlan.charAt(0).toUpperCase()}${selectedPlan.slice(1)} ${selectedBilling} subscription started.`, type: "success" });
-              setView("landing");
+            onComplete={({ billing, monthlyCredits }) => {
+              // Annual credits are provided upfront for 12 months plus the 1,000-credit annual bonus.
+              const credits = billing === "annual" ? monthlyCredits * 12 + 1000 : monthlyCredits;
+              setScenario("subscriber-free");
+              setFreeTotal(20);
+              setPromptsRemaining(20);
+              setCreditsRemaining(credits);
+              setFreePromptsJustExhausted(false);
+              setListPurchaseContext(null);
+              setToast({
+                message: `${selectedPlan.charAt(0).toUpperCase()}${selectedPlan.slice(1)} ${billing} subscription started · ${credits.toLocaleString()} credits added.`,
+                type: "success",
+              });
+              setView(plansReturnView === "results" && hasActiveSmartSearchConversation ? "results" : "landing");
             }}
           />
         );

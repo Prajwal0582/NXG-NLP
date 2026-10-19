@@ -6,7 +6,7 @@ interface SubscriptionCheckoutViewProps {
   planId: Exclude<PlanId, "buy-list">;
   billing: BillingPeriod;
   onBack: () => void;
-  onComplete: () => void;
+  onComplete: (result: { billing: BillingPeriod; monthlyCredits: number }) => void;
 }
 
 const PLAN_META = {
@@ -532,7 +532,7 @@ export default function SubscriptionCheckoutView({
 
               <button
                 type="button"
-                onClick={onComplete}
+                onClick={() => onComplete({ billing, monthlyCredits: credits })}
                 disabled={!termsAgreed}
                 className="w-full rounded-lg border border-[#008DC3] bg-[#008DC3] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#00729F] disabled:cursor-not-allowed disabled:opacity-50"
               >

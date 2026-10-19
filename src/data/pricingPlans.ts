@@ -53,7 +53,7 @@ export const PLANS: PlanDefinition[] = [
     category: "LEAD EXPLORATION",
     name: "Basic",
     description: "Discover, research, and organize your ideal customers.",
-    cta: "Continue with Basic →",
+    cta: "Choose Basic →",
     monthly: {
       display: "99",
       suffix: "/mo",
@@ -86,6 +86,7 @@ export const PLANS: PlanDefinition[] = [
       { label: "Export leads (Credits required)" },
       { label: "Email unlocks (Credits required)" },
       { label: "Email Campaigns (Credits required)" },
+      { label: "MCP (credits required)", info: true },
       { label: "CRM integration", info: true },
     ],
     addons: [
@@ -138,6 +139,7 @@ export const PLANS: PlanDefinition[] = [
       { label: "Export leads (uses credits)" },
       { label: "Email unlocks (uses credits)" },
       { label: "Email Campaigns (uses credits)" },
+      { label: "MCP integration", info: true },
       { label: "CRM integration", info: true },
       { label: "Direct mail campaigns", info: true },
     ],
@@ -189,6 +191,7 @@ export const PLANS: PlanDefinition[] = [
           { label: "Export leads (uses credits)" },
           { label: "Email unlocks (uses credits)" },
           { label: "Email Campaigns (uses credits)" },
+          { label: "MCP integration", info: true },
           { label: "CRM integration", info: true },
           { label: "Direct mail campaigns", info: true },
         ],
@@ -197,6 +200,7 @@ export const PLANS: PlanDefinition[] = [
       { label: "Assign leads to team members" },
       { label: "Track team activities" },
       { label: "Team performance reporting" },
+      { label: "MCP integration", info: true },
       { label: "Admin oversight" },
       { label: "Centralized lead management" },
       { label: "Priority account support" },
@@ -217,13 +221,13 @@ export const PLANS: PlanDefinition[] = [
     description: "Perfect for one-time outreach campaigns. No subscription required.",
     cta: "Search for leads →",
     monthly: {
-      display: "-.--",
+      display: "Custom price",
       suffix: "",
       supportLines: ["Price will be calculated based on selected records."],
       benefit: "12 month free list access on export",
     },
     annual: {
-      display: "-.--",
+      display: "Custom price",
       suffix: "",
       supportLines: ["Price will be calculated based on selected records."],
       benefit: "12 month free list access on export",
@@ -247,6 +251,7 @@ export const PLANS: PlanDefinition[] = [
         children: [
           { label: "Weekly data refresh" },
           { label: "Email and direct mail campaign" },
+          { label: "MCP (credits required)", info: true },
           { label: "CRM integration" },
           { label: "Buyer intent" },
           { label: "Consumer cellphone" },
@@ -355,6 +360,10 @@ export const FEATURE_TOOLTIPS: Record<string, string> = {
     "Additional charge for postage, billed separately from credits, paid at time of send",
   "CRM integration": "CRM integration allows you to export data directly to your CRM",
   "CRM Integration": "CRM integration allows you to export data directly to your CRM",
+  "MCP (credits required)":
+    "Access Salesgenie in Claude or ChatGPT through MCP. Setup is available; prospecting actions use credits.",
+  "MCP integration":
+    "Bring Salesgenie into Claude or ChatGPT with MCP so you can research and act on leads in your AI tools.",
   "Consumer cellphone":
     "Access mobile phone numbers associated with U.S consumers and households, where available and permitted",
   "Consumer cellphones":
@@ -374,4 +383,65 @@ export function resolveTooltip(labelOrValue: string, rowLabel?: string): string 
     return FEATURE_TOOLTIPS[`uses credits:${rowLabel}`] ?? FEATURE_TOOLTIPS["uses credits"];
   }
   return FEATURE_TOOLTIPS[labelOrValue];
+}
+
+/** Subscription-only plans (excludes one-time Buy List). */
+export const SUBSCRIPTION_PLANS = PLANS.filter((p) => p.id !== "buy-list");
+
+export const BUY_LIST_PLAN = PLANS.find((p) => p.id === "buy-list")!;
+
+/**
+ * Compact commercial differentiators derived from existing plan data.
+ * Used by Direction 2 / 3 presentation only — does not change commercial offering.
+ */
+export interface PackageSummary {
+  access: string;
+  /** Matches plan benefit / allowance copy for the billing period. */
+  creditsLabel: (billing: BillingPeriod) => string;
+  users: string;
+  /** Short differentiators pulled from existing included features. */
+  keyDifferentiators: string[];
+}
+
+export const PACKAGE_SUMMARIES: Record<Exclude<PlanId, "buy-list">, PackageSummary> = {
+  basic: {
+    access: "View only",
+    creditsLabel: () => "No included credits",
+    users: "1 user",
+    keyDifferentiators: [
+      "Weekly data refresh",
+      "Customer profile analysis",
+      "Dedicated advisor & expert guidance",
+    ],
+  },
+  pro: {
+    access: "View + Export",
+    creditsLabel: (billing) =>
+      billing === "monthly" ? "500 credits/month" : "6000 credits/yr (provided upfront)",
+    users: "1 user",
+    keyDifferentiators: [
+      "Export leads (uses credits)",
+      "Email unlocks (uses credits)",
+      "Email Campaigns (uses credits)",
+      "CRM integration",
+    ],
+  },
+  team: {
+    access: "View + Export",
+    creditsLabel: (billing) =>
+      billing === "monthly" ? "500 shared credits/month" : "6000 credits/yr (provided upfront)",
+    users: "5 users included",
+    keyDifferentiators: [
+      "5 user licenses included",
+      "Assign leads to team members",
+      "Team performance reporting",
+      "Admin oversight",
+    ],
+  },
+};
+
+/** Allowance row copy — same as existing plan benefit strings. */
+export function planAllowance(planId: Exclude<PlanId, "buy-list">, billing: BillingPeriod): string {
+  const plan = PLANS.find((p) => p.id === planId)!;
+  return billing === "monthly" ? plan.monthly.benefit : plan.annual.benefit;
 }

@@ -8,6 +8,11 @@ import {
   resolveTooltip,
 } from "../data/pricingPlans";
 import type { ListPurchaseContext } from "../types";
+import type { PricingDirection } from "./pricing/pricingTypes";
+import { PackageFirstLayout } from "./pricing/PackageFirstLayout";
+import { ValueComparisonLayout } from "./pricing/ValueComparisonLayout";
+import { GuidedChoiceLayout } from "./pricing/GuidedChoiceLayout";
+import SubscriptionComparison from "./pricing/SubscriptionComparison";
 
 interface PlansViewProps {
   onBack: () => void;
@@ -87,15 +92,6 @@ function PlusIcon() {
   return (
     <svg viewBox="0 0 14 14" fill="none" className="size-3.5 shrink-0 text-[#0BA38C]" aria-hidden>
       <path d="M7 2.5v9M2.5 7h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CheckCircleOutline() {
-  return (
-    <svg viewBox="0 0 14 14" fill="none" className="size-3.5 shrink-0 text-[#026B5C]" aria-hidden>
-      <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
-      <path d="M4.5 7.2l1.7 1.7 3.4-3.6" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -290,6 +286,8 @@ export default function PlansView({
   const [billing, setBilling] = useState<BillingPeriod>("annual");
   const [goal, setGoal] = useState<GoalId | null>(contextDefaultGoal);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(contextDefaultPlan);
+  /** Prototype-only stakeholder switcher — not customer-facing. */
+  const [direction, setDirection] = useState<PricingDirection>(1);
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
     for (const plan of PLANS) {
@@ -412,12 +410,15 @@ export default function PlansView({
   // Click outside goal chips / pricing cards → restore context default
   useEffect(() => {
     function onPointerDown(e: MouseEvent) {
+      // Option 4 manages its own recommendation UX.
+      if (direction === 4) return;
       const el = e.target as HTMLElement | null;
       if (!el) return;
       if (el.closest("[data-goal-chip]")) return;
       if (el.closest("[data-plan-card]")) return;
-      // Keep billing / header interactions from wiping the recommendation mid-toggle
+      // Keep billing / header / direction switcher from wiping the recommendation
       if (el.closest("[data-pricing-header]")) return;
+      if (el.closest("[data-direction-switcher]")) return;
 
       const isDefault =
         goal === contextDefaultGoal && selectedPlan === contextDefaultPlan;
@@ -425,24 +426,18 @@ export default function PlansView({
     }
     document.addEventListener("mousedown", onPointerDown);
     return () => document.removeEventListener("mousedown", onPointerDown);
-  }, [goal, selectedPlan, contextDefaultGoal, contextDefaultPlan]);
+  }, [goal, selectedPlan, contextDefaultGoal, contextDefaultPlan, direction]);
 
-  // One recommendation badge: MOST POPULAR only in standard Pro default;
-  // purchase-list mode uses RECOMMENDED (goal = list) — never both.
-  const activeBadgeLabel =
-    isPurchaseMode
-      ? selectedPlan === "buy-list" || goal !== null
-        ? "RECOMMENDED"
-        : null
-      : goal === null
-        ? selectedPlan === "pro"
-          ? "MOST POPULAR"
-          : null
-        : "RECOMMENDED";
+  // One derived badge — mutually exclusive MOST POPULAR vs RECOMMENDED.
+  // Goal / purchase context → RECOMMENDED on that plan; otherwise MOST POPULAR on Pro.
+  const badgePlanId: PlanId =
+    goal !== null ? GOAL_TO_PLAN[goal] : isPurchaseMode ? "buy-list" : "pro";
+  const activeBadgeLabel: "MOST POPULAR" | "RECOMMENDED" =
+    goal !== null || isPurchaseMode ? "RECOMMENDED" : "MOST POPULAR";
 
   const buyListPriceDisplay = purchaseContext
     ? purchaseContext.estimatedPrice.toLocaleString("en-US")
-    : "-.--";
+    : "Custom price";
   const buyListSupportLines = purchaseContext
     ? [
         `${purchaseContext.resultCount.toLocaleString()} qualified leads`,
@@ -451,12 +446,66 @@ export default function PlansView({
     : ["Price will be calculated based on selected records."];
   const buyListCta = isPurchaseMode ? "Proceed to checkout →" : "Search for leads →";
 
+  const layoutProps = {
+    billing,
+    selectedPlan,
+    badgePlanId,
+    activeBadgeLabel,
+    purchaseContext,
+    isPurchaseMode,
+    buyListPriceDisplay,
+    buyListSupportLines,
+    buyListCta,
+    onSelectCard: selectCard,
+    onCta: handleCta,
+    onSelectPlan,
+  };
+
+  const DIRECTIONS: { id: PricingDirection; label: string }[] = [
+    { id: 1, label: "1 — Package First" },
+    { id: 2, label: "2 — Current" },
+    { id: 3, label: "3 — Value Comparison" },
+    { id: 4, label: "4 — At-a-Glance" },
+  ];
+
   return (
     <div className="h-screen w-full overflow-y-auto bg-[#F2F4F7]">
+      {/* Prototype-only direction switcher for CTO review */}
+      <div data-direction-switcher className="w-full px-4 sm:px-6 lg:px-10 xl:px-28 pt-4">
+        <div className="flex flex-wrap items-center gap-3 rounded-lg border border-dashed border-[#D0D5DD] bg-[#F9FAFB] px-4 py-2.5">
+          <span className="text-xs font-medium uppercase tracking-wide text-[#98A2B3]">
+            Pricing design direction
+          </span>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Pricing design direction">
+            {DIRECTIONS.map((d) => (
+              <button
+                key={d.id}
+                type="button"
+                role="tab"
+                aria-selected={direction === d.id}
+                onClick={() => setDirection(d.id)}
+                className={`h-8 px-3 rounded-md text-xs font-medium transition-colors ${
+                  direction === d.id
+                    ? "bg-[#344054] text-white"
+                    : "bg-white text-[#667085] border border-[#D0D5DD] hover:bg-[#F2F4F7]"
+                }`}
+              >
+                {d.label}
+              </button>
+            ))}
+          </div>
+          <span className="text-[11px] text-[#98A2B3] ml-auto hidden sm:inline">
+            Internal prototype — not customer-facing
+          </span>
+        </div>
+      </div>
+
+      {(direction === 2 || direction === 3) && (
+      <>
       {/* Upper header card — compact ~110px */}
-      <div data-pricing-header className="w-full px-28 pt-6 pb-0">
-        <div className="relative w-full h-[110px] bg-white border border-[#D0D5DD] border-l-8 border-l-[#79C1E9] rounded-lg overflow-visible">
-          <div className="flex h-full items-center justify-between gap-8 px-8 py-3">
+      <div data-pricing-header className="w-full px-4 sm:px-6 lg:px-10 xl:px-28 pt-4 sm:pt-6 pb-0">
+        <div className="relative w-full min-h-0 lg:h-[110px] bg-white border border-[#D0D5DD] border-l-8 border-l-[#79C1E9] rounded-lg overflow-visible">
+          <div className="flex h-full flex-col lg:flex-row lg:items-center justify-between gap-4 lg:gap-8 px-4 sm:px-6 lg:px-8 py-4 lg:py-3">
             <div className="flex items-start gap-3 min-w-0">
               <button
                 type="button"
@@ -478,7 +527,7 @@ export default function PlansView({
               </div>
             </div>
 
-            <div className="flex shrink-0 items-center gap-5">
+            <div className="flex shrink-0 items-center gap-5 pb-3">
               <div className="relative">
                 <div className="flex h-10 items-stretch" role="group" aria-label="Billing period">
                   <button
@@ -504,30 +553,28 @@ export default function PlansView({
                     >
                       Annual Billing
                     </button>
-                    <span className="pointer-events-none absolute left-1/2 top-[32px] z-10 -translate-x-1/2 inline-flex h-6 items-center justify-center rounded px-2 text-xs font-medium leading-[18px] bg-[#EEF0F9] text-[#6572B4] whitespace-nowrap">
-                      Best Value
+                    {/* ~16.67% from 10 months paid / 12 months access → display Save 17% */}
+                    <span className="pointer-events-none absolute left-1/2 top-[32px] z-10 -translate-x-1/2 inline-flex h-7 items-center justify-center rounded-md px-3 text-xs font-bold leading-[18px] tracking-wide bg-[#FEC84B] text-[#101828] border-2 border-[#DC6803] shadow-[0_2px_4px_rgba(180,83,9,0.28)] whitespace-nowrap">
+                      Save 17%
                     </span>
                   </div>
                 </div>
               </div>
 
               <div
-                className={`w-[300px] shrink-0 transition-opacity duration-0 ${
+                className={`flex min-h-[52px] w-[300px] shrink-0 items-center gap-2.5 rounded-lg border-2 border-[#12B76A] bg-[#DCFAE6] px-3 py-2.5 shadow-[0_1px_3px_rgba(18,183,106,0.18)] transition-opacity duration-0 ${
                   billing === "annual" ? "opacity-100" : "opacity-0"
                 }`}
                 aria-hidden={billing !== "annual"}
               >
-                <div className="flex w-full items-start gap-2 rounded-lg border border-[#CDE9E0] bg-[#F2F9F7] px-3 py-2">
-                  <span className="pt-0.5 shrink-0">
-                    <CheckCircleOutline />
-                  </span>
-                  <p className="text-xs font-medium leading-[18px] text-[#026B5C]">
-                    Save with annual:{" "}
-                    <span className="font-normal text-[#0D7867]">
-                      Pay only for 10 months and receive 12 months of access and 1,000 bonus credits.
-                    </span>
-                  </p>
-                </div>
+                <span className="shrink-0 size-5 flex items-center justify-center rounded-full bg-[#12B76A]">
+                  <svg viewBox="0 0 14 14" fill="none" className="size-3" aria-hidden>
+                    <path d="M3.5 7l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+                <p className="text-xs font-medium leading-[18px] text-[#054F31]">
+                  Pay only for 10 months and get 12 months access + 1,000 bonus credits.
+                </p>
               </div>
             </div>
           </div>
@@ -535,7 +582,7 @@ export default function PlansView({
       </div>
 
       {/* Goal recommendation — 24px below card; lines match chip-row width */}
-      <div className="w-full px-28 pt-6 pb-6 flex flex-col items-center gap-5">
+      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-28 pt-4 sm:pt-6 pb-6 flex flex-col items-center gap-5">
         <div className="w-fit max-w-full mx-auto flex flex-col items-stretch gap-5">
           <div className="flex items-center gap-4">
             <div className="h-px min-w-[48px] flex-1 bg-[#98A2B3]/60" />
@@ -577,15 +624,31 @@ export default function PlansView({
           <a href="mailto:genie@data-axle.com" className="font-semibold text-[#008DC3]">genie@data-axle.com</a>.
         </p>
       </div>
+      </>
+      )}
 
+      {/* Direction bodies — shared billing / goal / selection state.
+          1 = Package First (default); 2 = previous Current layout. */}
+      {direction === 1 && (
+        <PackageFirstLayout
+          {...layoutProps}
+          goal={goal}
+          onSelectGoal={selectGoal}
+          onBack={onBack}
+          onBillingChange={setBilling}
+        />
+      )}
+
+      {direction === 2 && (
+        <>
       {/* Pricing cards — top-accent selection only; stable geometry */}
-      <div className="w-full px-28 pb-10">
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6 items-stretch">
+      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-28 pb-10">
+        <div className="w-full grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 sm:gap-6 items-stretch">
           {PLANS.map((plan) => {
             const pricing = billing === "monthly" ? plan.monthly : plan.annual;
             const isSelected = selectedPlan === plan.id;
             const isBuy = plan.id === "buy-list";
-            const showBadge = isSelected && activeBadgeLabel !== null;
+            const showBadge = plan.id === badgePlanId;
 
             return (
               <div
@@ -631,10 +694,16 @@ export default function PlansView({
 
                     <div className="flex flex-col gap-4">
                       {isBuy ? (
-                        <p className="inline-flex items-start font-semibold text-[#1D2939] tracking-[-0.72px]">
-                          <span className="text-[23px] leading-[28px] mt-[3px]">$</span>
-                          <span className="text-[36px] leading-[44px]">{buyListPriceDisplay}</span>
-                        </p>
+                        buyListPriceDisplay === "Custom price" ? (
+                          <p className="font-semibold text-[#1D2939] text-[28px] leading-9 tracking-tight">
+                            Custom price
+                          </p>
+                        ) : (
+                          <p className="inline-flex items-start font-semibold text-[#1D2939] tracking-[-0.72px]">
+                            <span className="text-[23px] leading-[28px] mt-[3px]">$</span>
+                            <span className="text-[36px] leading-[44px]">{buyListPriceDisplay}</span>
+                          </p>
+                        )
                       ) : (
                         <div className="flex items-start">
                           <span className="text-sm font-normal leading-5 text-[#475467] pt-1 w-[59px]">Starting</span>
@@ -741,151 +810,18 @@ export default function PlansView({
       </div>
 
       {/* Compare subscription plans — Figma 27469:39363 */}
-      <div className="w-full px-28 pb-12">
-        <div className="w-full bg-white rounded-2xl px-10 py-2.5 flex flex-col gap-2.5">
-          {/*
-            Sticky scope: header sticks while Sales / Engagement / Customer success scroll.
-            Additional Features sits outside this wrapper so the header unsticks and scrolls away.
-          */}
-          <div className="relative">
-            <div
-              className="sticky top-0 z-30 grid h-[156px] box-border bg-white border-b border-[#EAECF0]"
-              style={{
-                gridTemplateColumns: "minmax(320px,1fr) repeat(3, minmax(240px,1fr))",
-              }}
-            >
-              <div className="px-6 py-4 flex flex-col justify-center gap-2 self-stretch max-h-[156px]">
-                <h2 className="text-lg font-semibold leading-7 text-[#008DC3]">
-                  Compare subscription plans
-                </h2>
-                <p className="text-xs font-normal leading-[18px] text-[#1D2939] max-w-[280px]">
-                  Dig into the details when you need validation
-                  <br />
-                  pricing cards remain the primary path to choose.
-                </p>
-              </div>
-              {(["basic", "pro", "team"] as const).map((id) => {
-                const plan = PLANS.find((p) => p.id === id)!;
-                const pricing = billing === "monthly" ? plan.monthly : plan.annual;
-                return (
-                  <div
-                    key={id}
-                    className="px-6 py-4 flex flex-col items-center justify-center gap-2 bg-white self-stretch max-h-[156px]"
-                  >
-                    <div className="flex w-full flex-col items-center">
-                      <p className="h-7 w-full text-center text-lg font-medium leading-7 text-[#008DC3]">
-                        {plan.name}
-                      </p>
-                      <p className="flex h-11 items-start justify-center tracking-tight text-[#1D2939]">
-                        <span className="text-[10px] font-semibold leading-[44px]">$</span>
-                        <span className="self-center text-sm font-medium leading-5">
-                          {pricing.display}{pricing.suffix}
-                        </span>
-                      </p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => onSelectPlan(id, billing)}
-                      className="w-full max-w-[248px] rounded-md text-sm font-medium leading-5 bg-white text-[#475467] border border-[#D0D5DD] px-3 py-1.5 whitespace-nowrap hover:bg-[#F9FAFB]"
-                    >
-                      {plan.cta}
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
+      <SubscriptionComparison billing={billing} onSelectPlan={onSelectPlan} />
+        </>
+      )}
 
-            <div className="flex flex-col gap-2 pt-2">
-              {COMPARE_SECTIONS.map((section) => (
-                <div
-                  key={section.title}
-                  className={`border-l-4 ${sectionAccent(section.title)} flex flex-col`}
-                >
-                  <div
-                    className="grid h-10 pl-2 border-b border-[#D0D5DD]"
-                    style={{ gridTemplateColumns: "minmax(320px,1fr) repeat(3, minmax(240px,1fr))" }}
-                  >
-                    <div className="flex h-10 items-center gap-2">
-                      {sectionIcon(section.title)}
-                      <span className="text-sm font-semibold leading-5 text-[#1D2939]">{section.title}</span>
-                    </div>
-                    <div className="bg-[#F9FAFB] h-10 border-l border-[#EAECF0]" />
-                    <div className="bg-[#F9FAFB] h-10 border-l border-[#EAECF0]" />
-                    <div className="bg-[#F9FAFB] h-10 border-l border-[#EAECF0]" />
-                  </div>
-                  {section.rows.map((row) => {
-                    const labelTip = row.info ? resolveTooltip(row.label) : undefined;
-                    return (
-                      <div
-                        key={row.label}
-                        className="grid h-10 pl-2 border-b border-[#D0D5DD]"
-                        style={{ gridTemplateColumns: "minmax(320px,1fr) repeat(3, minmax(240px,1fr))" }}
-                      >
-                        <div className="pl-7 pr-2 h-10 flex items-center gap-1 text-sm font-normal leading-5 text-[#475467]">
-                          {row.label}
-                          {labelTip ? <InfoTip text={labelTip} /> : null}
-                        </div>
-                        <div className="bg-[#F9FAFB] h-10 px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
-                          <CellValue val={row.basic} rowLabel={row.label} />
-                        </div>
-                        <div className="bg-[#F9FAFB] h-10 px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
-                          <CellValue val={row.pro} rowLabel={row.label} />
-                        </div>
-                        <div className="bg-[#F9FAFB] h-10 px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
-                          <CellValue val={row.team} rowLabel={row.label} />
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Additional Features — outside sticky parent so header releases */}
-          <div className="bg-[#F8F7FF] border-l-4 border-[#C9BFFD]">
-            <div
-              className="grid pl-2"
-              style={{ gridTemplateColumns: "minmax(320px,1fr) minmax(0,3fr)" }}
-            >
-              <div className="py-2 flex items-center gap-2">
-                <DiamondIcon />
-                <span className="text-sm font-semibold leading-5 text-[#1D2939]">Additional Features</span>
-                <AddonChip />
-              </div>
-              <div className="bg-[#F2EFFF]" />
-            </div>
-            {ADDON_ROWS.map((row) => (
-              <div
-                key={row.title}
-                className="grid pl-2 border-t border-[#C9BFFD]/60"
-                style={{ gridTemplateColumns: "minmax(320px,1fr) minmax(0,3fr)" }}
-              >
-                <div className="pl-7 pr-2 py-2 flex flex-col gap-2 justify-center min-h-[49px]">
-                  <p className="text-sm font-medium leading-5 text-[#475467]">{row.title}</p>
-                  {row.description ? (
-                    <p className="text-xs font-normal leading-[18px] text-[#475467]">{row.description}</p>
-                  ) : null}
-                </div>
-                <div className="bg-[#F2EFFF] p-2 flex items-center justify-center">
-                  <p className="text-sm font-medium leading-5 text-[#475467] text-center">{row.detail}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-[#F9FAFB] border border-[#D0D5DD] rounded-lg px-6 py-4 shadow-[0_1px_1px_rgba(71,84,103,0.03)]">
-            <p className="text-base leading-6 text-[#1D2939] text-center">
-              <span className="font-semibold">Looking for custom solutions? </span>
-              <span className="font-normal">Contact us at </span>
-              <a href="tel:8777083844" className="font-semibold text-[#008DC3]">877.708.3844</a>
-              <span className="font-normal"> or </span>
-              <a href="mailto:genie@data-axle.com" className="font-semibold text-[#008DC3]">genie@data-axle.com</a>
-              <span className="font-normal">.</span>
-            </p>
-          </div>
-        </div>
-      </div>
+      {direction === 3 && <ValueComparisonLayout {...layoutProps} />}
+      {direction === 4 && (
+        <GuidedChoiceLayout
+          {...layoutProps}
+          onBack={onBack}
+          onBillingChange={setBilling}
+        />
+      )}
     </div>
   );
 }
