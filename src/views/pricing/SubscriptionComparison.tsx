@@ -31,7 +31,7 @@ function InfoTip({ text }: { text: string }) {
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[60] w-max max-w-[260px] -translate-x-1/2 rounded-md bg-[#1D2939] px-3 py-2 text-center text-xs font-normal leading-[18px] text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100"
+        className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[60] w-max max-w-[260px] -translate-x-1/2 rounded-md bg-[#1D2939] px-3 py-2 text-center text-xs font-normal leading-[18px] text-white hidden shadow-lg group-hover/tip:block group-focus-within/tip:block"
       >
         {text}
         <span
@@ -128,7 +128,7 @@ function sectionIcon(title: string) {
 }
 
 const COMPARE_GRID = {
-  gridTemplateColumns: "minmax(320px,1fr) repeat(3, minmax(240px,1fr))",
+  gridTemplateColumns: "minmax(220px,1.3fr) repeat(3, minmax(170px,1fr))",
 } as const;
 
 /** Option 1 source-of-truth comparison — sticky through Sales/Engagement/Customer success. */
@@ -140,9 +140,9 @@ export default function SubscriptionComparison({
   onSelectPlan: (planId: Exclude<PlanId, "buy-list">, billing: BillingPeriod) => void;
 }) {
   return (
-    <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-28 pb-12">
-      <div className="w-full bg-white rounded-2xl px-4 sm:px-6 lg:px-10 py-2.5 flex flex-col gap-2.5 overflow-x-auto">
-        <div className="relative min-w-[920px]">
+    <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-28 pb-12">
+      <div className="w-full bg-white rounded-2xl px-4 sm:px-6 lg:px-10 py-2.5 flex flex-col gap-2.5 max-lg:overflow-x-auto">
+        <div className="relative max-lg:min-w-[760px]">
           <div
             className="sticky top-0 z-30 grid h-[156px] box-border bg-white border-b border-[#EAECF0]"
             style={COMPARE_GRID}
@@ -163,7 +163,7 @@ export default function SubscriptionComparison({
               return (
                 <div
                   key={id}
-                  className="px-6 py-4 flex flex-col items-center justify-center gap-2 bg-white self-stretch max-h-[156px]"
+                  className="min-w-0 px-3 xl:px-6 py-4 flex flex-col items-center justify-center gap-2 bg-white self-stretch max-h-[156px]"
                 >
                   <div className="flex w-full flex-col items-center">
                     <p className="h-7 w-full text-center text-lg font-medium leading-7 text-[#008DC3]">
@@ -179,7 +179,7 @@ export default function SubscriptionComparison({
                   <button
                     type="button"
                     onClick={() => onSelectPlan(id, billing)}
-                    className="w-full max-w-[248px] rounded-md text-sm font-medium leading-5 bg-white text-[#475467] border border-[#D0D5DD] px-3 py-1.5 whitespace-nowrap hover:bg-[#F9FAFB]"
+                    className="w-full max-w-[248px] rounded-md text-sm font-medium leading-5 bg-white text-[#475467] border border-[#D0D5DD] px-3 py-1.5 hover:bg-[#F9FAFB]"
                   >
                     {plan.cta}
                   </button>
@@ -208,20 +208,20 @@ export default function SubscriptionComparison({
                   return (
                     <div
                       key={row.label}
-                      className="grid h-10 pl-2 border-b border-[#D0D5DD]"
+                      className="grid min-h-10 pl-2 border-b border-[#D0D5DD]"
                       style={COMPARE_GRID}
                     >
-                      <div className="pl-7 pr-2 h-10 flex items-center gap-1 text-sm font-normal leading-5 text-[#475467]">
+                      <div className="pl-7 pr-2 min-h-10 py-1.5 flex items-center gap-1 text-sm font-normal leading-5 text-[#475467]">
                         {row.label}
                         {labelTip ? <InfoTip text={labelTip} /> : null}
                       </div>
-                      <div className="bg-[#F9FAFB] h-10 px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
+                      <div className="min-w-0 bg-[#F9FAFB] min-h-10 py-1.5 px-3 xl:px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
                         <CellValue val={row.basic} rowLabel={row.label} />
                       </div>
-                      <div className="bg-[#F9FAFB] h-10 px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
+                      <div className="min-w-0 bg-[#F9FAFB] min-h-10 py-1.5 px-3 xl:px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
                         <CellValue val={row.pro} rowLabel={row.label} />
                       </div>
-                      <div className="bg-[#F9FAFB] h-10 px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
+                      <div className="min-w-0 bg-[#F9FAFB] min-h-10 py-1.5 px-3 xl:px-6 flex items-center justify-center overflow-visible border-l border-[#EAECF0]">
                         <CellValue val={row.team} rowLabel={row.label} />
                       </div>
                     </div>
@@ -235,7 +235,7 @@ export default function SubscriptionComparison({
         <div className="bg-[#F8F7FF] border-l-4 border-[#C9BFFD]">
           <div
             className="grid pl-2"
-            style={{ gridTemplateColumns: "minmax(320px,1fr) minmax(0,3fr)" }}
+            style={{ gridTemplateColumns: "minmax(220px,1.3fr) minmax(0,3fr)" }}
           >
             <div className="py-2 flex items-center gap-2">
               <DiamondIcon />
@@ -248,7 +248,7 @@ export default function SubscriptionComparison({
             <div
               key={row.title}
               className="grid pl-2 border-t border-[#C9BFFD]/60"
-              style={{ gridTemplateColumns: "minmax(320px,1fr) minmax(0,3fr)" }}
+              style={{ gridTemplateColumns: "minmax(220px,1.3fr) minmax(0,3fr)" }}
             >
               <div className="pl-7 pr-2 py-2 flex flex-col gap-2 justify-center min-h-[49px]">
                 <p className="text-sm font-medium leading-5 text-[#475467]">{row.title}</p>

@@ -4,6 +4,7 @@ import emptyIllustration from "../assets/manual-search-empty.png";
 interface ManualSearchViewProps {
   onBack: () => void;
   onPlans: () => void;
+  onSmartSearch: () => void;
 }
 
 type Phase = "idle" | "suggesting" | "loading" | "results";
@@ -382,7 +383,7 @@ function SkeletonBar({ className = "" }: { className?: string }) {
 
 // ── Main view ────────────────────────────────────────────────────────────────
 
-export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewProps) {
+export default function ManualSearchView({ onBack, onPlans, onSmartSearch }: ManualSearchViewProps) {
   const [phase, setPhase] = useState<Phase>("idle");
   const [query, setQuery] = useState("");
   const [location, setLocation] = useState("");
@@ -462,6 +463,17 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
             </div>
           </div>
           <div className="flex shrink-0 items-center gap-2">
+            <button
+              type="button"
+              onClick={onSmartSearch}
+              className="inline-flex h-9 items-center gap-2 rounded-lg border border-[#CAE6F9] bg-[#F1F9FD] px-3.5 text-sm font-medium leading-5 text-[#00729F] transition-colors hover:bg-[#E5F3FC]"
+            >
+              <svg viewBox="0 0 20 20" fill="none" className="size-4 shrink-0" aria-hidden>
+                <path d="M7.5 2.5c0 0 1.05 3.4 2.7 4.55C11.85 8.2 12.5 8.5 12.5 8.5s-.65.3-2.3 1.45C8.55 11.1 7.5 14.5 7.5 14.5s-1.05-3.4-2.7-4.55C3.15 8.8 2.5 8.5 2.5 8.5s.65-.3 2.3-1.45C6.45 5.9 7.5 2.5 7.5 2.5Z" fill="#008DC3" />
+                <path d="M14.5 9.5c0 0 .6 1.95 1.55 2.6.95.65 1.45.9 1.45.9s-.5.25-1.45.9c-.95.65-1.55 2.6-1.55 2.6s-.6-1.95-1.55-2.6c-.95-.65-1.45-.9-1.45-.9s.5-.25 1.45-.9c.95-.65 1.55-2.6 1.55-2.6Z" fill="#008DC3" />
+              </svg>
+              Try Smart Search
+            </button>
             <button
               type="button"
               className="flex size-9 items-center justify-center rounded-lg border border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"

@@ -311,7 +311,13 @@ export default function App() {
         return null;
 
       case "manual-search":
-        return <ManualSearchView onBack={() => setView("landing")} onPlans={() => openPlans("manual-search")} />;
+        return (
+          <ManualSearchView
+            onBack={() => setView("landing")}
+            onPlans={() => openPlans("manual-search")}
+            onSmartSearch={() => handleNavigate("landing")}
+          />
+        );
 
       case "saved-lists":
         return (
@@ -320,6 +326,7 @@ export default function App() {
             onStartAISearch={() => setView("landing")}
             justSavedListName={justSavedListName}
             onSaveComplete={() => setJustSavedListName(null)}
+            lastSmartPrompt={submittedPrompt}
           />
         );
 

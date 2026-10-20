@@ -1,8 +1,6 @@
 import type { BillingPeriod, PlanId } from "../../data/pricingPlans";
 import type { ListPurchaseContext } from "../../types";
 
-export type PricingDirection = 1 | 2 | 3 | 4;
-
 export interface PricingLayoutProps {
   billing: BillingPeriod;
   selectedPlan: PlanId;

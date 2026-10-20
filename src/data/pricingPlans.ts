@@ -283,6 +283,13 @@ export const COMPARE_SECTIONS: { title: string; rows: CompareRow[] }[] = [
       { label: "Mobile app", basic: true, pro: true, team: true },
       { label: "Lead management", basic: true, pro: true, team: true },
       {
+        label: "MCP Integration",
+        info: true,
+        basic: "unlock with credit purchase",
+        pro: "uses credits",
+        team: "uses credits",
+      },
+      {
         label: "CRM Integration",
         info: true,
         basic: "unlock with credit purchase",
@@ -364,6 +371,8 @@ export const FEATURE_TOOLTIPS: Record<string, string> = {
     "Access Salesgenie in Claude or ChatGPT through MCP. Setup is available; prospecting actions use credits.",
   "MCP integration":
     "Bring Salesgenie into Claude or ChatGPT with MCP so you can research and act on leads in your AI tools.",
+  "MCP Integration":
+    "Bring Salesgenie into Claude or ChatGPT with MCP so you can research and act on leads in your AI tools.",
   "Consumer cellphone":
     "Access mobile phone numbers associated with U.S consumers and households, where available and permitted",
   "Consumer cellphones":
@@ -374,6 +383,7 @@ export const FEATURE_TOOLTIPS: Record<string, string> = {
   "unlock with credit purchase": "Each business or consumer record costs 1 credit",
   "uses credits:Exports": "Exporting each business or consumer record uses one credit",
   "uses credits:CRM Integration": "Exporting each business or consumer record uses one credit",
+  "uses credits:MCP Integration": "Prospecting actions taken through MCP use credits",
   "uses credits:Email addresses": "Each email address uses one credit",
   "uses credits": "Exporting each business or consumer record uses one credit",
 };

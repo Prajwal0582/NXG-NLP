@@ -88,7 +88,7 @@ function InfoTip({ text }: { text: string }) {
       </button>
       <span
         role="tooltip"
-        className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[60] w-max max-w-[220px] -translate-x-1/2 rounded-md bg-[#1D2939] px-3 py-2 text-center text-xs font-normal leading-[18px] text-white opacity-0 shadow-lg transition-opacity duration-150 group-hover/tip:opacity-100 group-focus-within/tip:opacity-100"
+        className="pointer-events-none absolute bottom-[calc(100%+6px)] left-1/2 z-[60] w-max max-w-[220px] -translate-x-1/2 rounded-md bg-[#1D2939] px-3 py-2 text-center text-xs font-normal leading-[18px] text-white hidden shadow-lg group-hover/tip:block group-focus-within/tip:block"
       >
         {text}
       </span>
@@ -341,12 +341,12 @@ function PlanFacts({
   items: { label: string; value: ReactNode; emphasize?: boolean }[];
 }) {
   return (
-    <div className="box-border h-[92px] rounded-lg bg-[#F0F9FF] border border-[#D6EAF5] px-3 py-2.5">
+    <div className="box-border h-full min-h-[92px] rounded-lg bg-[#F0F9FF] border border-[#D6EAF5] px-3 py-2.5">
       <div className="flex h-full flex-col justify-center gap-2">
         {items.map((item) => (
-          <div key={item.label} className="flex min-w-0 items-center gap-1.5">
-            <FactIcon label={item.label} />
-            <p className="min-w-0 flex-1 text-[11px] leading-4 whitespace-nowrap overflow-hidden text-ellipsis">
+          <div key={item.label} className="flex min-w-0 items-start gap-1.5">
+            <span className="pt-px"><FactIcon label={item.label} /></span>
+            <p className="min-w-0 flex-1 text-[11px] leading-4 break-words">
               <span className="font-semibold uppercase tracking-wide text-[#667085]">
                 {item.label}:
               </span>{" "}
@@ -411,7 +411,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
   return (
     <>
       {/* Responsive inset: tight on phone, full desktop padding */}
-      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-28 pt-4 sm:pt-6 pb-16 sm:pb-20">
+      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-28 pt-4 sm:pt-6 pb-16 sm:pb-20">
         {/* One panel: context + billing + annual offer (no floating billing row) */}
         <div data-pricing-header className="w-full">
           <div className="relative w-full bg-white border border-[#D0D5DD] border-l-8 border-l-[#79C1E9] rounded-lg overflow-visible">
@@ -555,7 +555,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     onSelectCard(plan.id);
                   }
                 }}
-                className={`relative box-border h-full flex flex-col xl:row-span-5 xl:grid xl:grid-rows-subgrid rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
+                className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-5 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
                   isSelected
                     ? "border-[#B9D9EC]"
                     : "border-[#D0D5DD] hover:border-[#98A2B3]"
@@ -676,7 +676,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 onSelectCard("buy-list");
               }
             }}
-            className={`relative box-border h-full flex flex-col xl:row-span-5 xl:grid xl:grid-rows-subgrid rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
+            className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-5 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
               buySelected
                 ? "border-[#B9D9EC]"
                 : "border-[#D0D5DD] hover:border-[#98A2B3]"

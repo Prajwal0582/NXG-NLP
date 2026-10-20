@@ -1,11 +1,13 @@
 import { useState, useEffect } from "react";
 import type { UserScenario } from "../types";
+import { resolveScenario } from "../data/searchScenarios";
 
 interface SavedListsViewProps {
   scenario: UserScenario;
   onStartAISearch: () => void;
   justSavedListName?: string | null;
   onSaveComplete?: () => void;
+  lastSmartPrompt?: string;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -90,12 +92,28 @@ interface CardChip {
   variant: ChipVariant;
 }
 
+interface CriteriaFilter {
+  key?: string;
+  value: string;
+}
+
 interface SavedListCard {
   name: string;
   date: string;
   source: "smart" | "database";
   sourceLabel: string;
   chips: CardChip[];
+  prompt?: string;
+  filters?: CriteriaFilter[];
+}
+
+function filtersFromPrompt(prompt: string): CriteriaFilter[] {
+  const line = resolveScenario(prompt).thoughtProcess[0] ?? "";
+  return line
+    .replace(/^Applied filters:\s*/, "")
+    .split(" · ")
+    .filter(Boolean)
+    .map((value) => ({ value }));
 }
 
 const CARDS: SavedListCard[] = [
@@ -105,6 +123,12 @@ const CARDS: SavedListCard[] = [
     source: "smart",
     sourceLabel: "US Businesses: Smart recommendation",
     chips: [{ label: "Prospects 10k", variant: "prospect" }],
+    prompt: "Bakeries in Texas with more than 10 employees",
+    filters: [
+      { key: "Industry", value: "Bakeries" },
+      { key: "Location", value: "Texas" },
+      { key: "Employees", value: "More than 10" },
+    ],
   },
   {
     name: "Bakeries Test 2",
@@ -112,6 +136,13 @@ const CARDS: SavedListCard[] = [
     source: "smart",
     sourceLabel: "US Businesses: Smart recommendation",
     chips: [{ label: "Prospects 10k", variant: "prospect" }],
+    prompt: "Independent bakeries in Dallas with verified contacts",
+    filters: [
+      { key: "Industry", value: "Bakeries" },
+      { key: "Location", value: "Dallas, TX" },
+      { key: "Ownership", value: "Independent" },
+      { key: "Contacts", value: "Verified email" },
+    ],
   },
   {
     name: "Restaurants",
@@ -130,6 +161,65 @@ const CHIP_STYLES: Record<ChipVariant, string> = {
 };
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
+
+function AiSparkle({ className = "size-3" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 20 20" fill="none" className={`shrink-0 ${className}`} aria-hidden>
+      <path d="M7.5 2.5c0 0 1.05 3.4 2.7 4.55C11.85 8.2 12.5 8.5 12.5 8.5s-.65.3-2.3 1.45C8.55 11.1 7.5 14.5 7.5 14.5s-1.05-3.4-2.7-4.55C3.15 8.8 2.5 8.5 2.5 8.5s.65-.3 2.3-1.45C6.45 5.9 7.5 2.5 7.5 2.5Z" fill="#008DC3" />
+      <path d="M14.5 9.5c0 0 .6 1.95 1.55 2.6.95.65 1.45.9 1.45.9s-.5.25-1.45.9c-.95.65-1.55 2.6-1.55 2.6s-.6-1.95-1.55-2.6c-.95-.65-1.45-.9-1.45-.9s.5-.25 1.45-.9c.95-.65 1.55-2.6 1.55-2.6Z" fill="#008DC3" />
+    </svg>
+  );
+}
+
+function AiBadge() {
+  return (
+    <span
+      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#e5f3fc] px-2 py-0.5 text-xs font-semibold leading-[18px] text-[#008dc3]"
+      title="Created by Smart Search"
+    >
+      <AiSparkle />
+      AI
+    </span>
+  );
+}
+
+function AiCriteriaCard({ prompt, filters, onRefine }: { prompt: string; filters: CriteriaFilter[]; onRefine: () => void }) {
+  return (
+    <section className="flex flex-col gap-4 rounded-lg border border-[#eaecf0] bg-white p-5">
+      <div className="flex items-start gap-3">
+        <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <div className="flex items-center gap-2">
+            <AiSparkle className="size-4" />
+            <h3 className="text-base font-semibold leading-6 text-[#1d2939]">AI search criteria</h3>
+          </div>
+          <p className="text-sm leading-5 text-[#667085]">Smart Search applied these filters to build this list.</p>
+        </div>
+        <button
+          type="button"
+          onClick={onRefine}
+          className="shrink-0 pt-0.5 text-sm font-medium leading-5 text-[#008dc3] hover:text-[#00729f] hover:underline"
+        >
+          Refine in Smart Search
+        </button>
+      </div>
+      <div className="flex flex-col gap-1 rounded-lg bg-[#f9fafb] px-4 py-3">
+        <p className="text-xs font-medium uppercase leading-[18px] tracking-[0.5px] text-[#667085]">Your prompt</p>
+        <p className="text-sm leading-5 text-[#1d2939]">“{prompt}”</p>
+      </div>
+      <div className="flex flex-col gap-2">
+        <p className="text-xs font-medium uppercase leading-[18px] tracking-[0.5px] text-[#667085]">Filters applied</p>
+        <div className="flex flex-wrap gap-2">
+          {filters.map((f) => (
+            <span key={`${f.key}-${f.value}`} className="inline-flex items-center gap-1 rounded-full bg-[#f2f4f7] px-2.5 py-1 text-xs leading-[18px]">
+              {f.key && <span className="text-[#667085]">{f.key}</span>}
+              <span className="font-medium text-[#344054]">{f.value}</span>
+            </span>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function Chip({ label, variant }: CardChip) {
   return (
@@ -208,7 +298,10 @@ function AudienceCard({ card, onClick }: { card: SavedListCard; onClick?: () => 
         </div>
         {/* Content */}
         <div className="flex flex-col gap-0.5">
-          <h3 className="text-lg font-semibold text-[#1d2939] leading-7">{card.name}</h3>
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-[#1d2939] leading-7">{card.name}</h3>
+            {card.source === "smart" && <AiBadge />}
+          </div>
           <p className="text-xs text-[#667085]">{card.date}</p>
         </div>
       </div>
@@ -481,7 +574,7 @@ const DETAIL_KEBAB_ITEMS = [
   { label: "Create Email campaign", icon: "campaign" },
 ];
 
-function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => void }) {
+function SavedListDetail({ card, onBack, onRefine }: { card: SavedListCard; onBack: () => void; onRefine: () => void }) {
   const [detailTab, setDetailTab] = useState<"list" | "map" | "insights">("list");
   const [kebabOpen, setKebabOpen] = useState(false);
   const [checkedRows, setCheckedRows] = useState<Set<number>>(new Set());
@@ -518,7 +611,10 @@ function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => 
             </svg>
           </button>
           <div className="flex flex-col gap-2">
-            <h2 className="text-[20px] font-medium leading-[30px] tracking-[0.2px] text-[#1d2939]">{card.name}</h2>
+            <div className="flex items-center gap-2">
+              <h2 className="text-[20px] font-medium leading-[30px] tracking-[0.2px] text-[#1d2939]">{card.name}</h2>
+              {card.source === "smart" && <AiBadge />}
+            </div>
             <p className="text-[14px] leading-[21px] tracking-[0.14px] text-[#475467]">{card.date}</p>
           </div>
         </div>
@@ -744,6 +840,13 @@ function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => 
 
         {detailTab === "insights" && (
           <div className="px-7 pt-6 pb-10 space-y-4">
+            {card.source === "smart" && (
+              <AiCriteriaCard
+                prompt={card.prompt ?? card.name}
+                filters={card.filters ?? filtersFromPrompt(card.prompt ?? card.name)}
+                onRefine={onRefine}
+              />
+            )}
             <SimpleBarChart
               title="Top business types among qualified matches"
               rows={INSIGHTS_BIZ_TYPES}
@@ -770,7 +873,7 @@ function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => 
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 
-export default function SavedListsView({ onStartAISearch, justSavedListName, onSaveComplete }: SavedListsViewProps) {
+export default function SavedListsView({ onStartAISearch, justSavedListName, onSaveComplete, lastSmartPrompt }: SavedListsViewProps) {
   const [activeTab, setActiveTab] = useState<"saved" | "assigned">("saved");
   const [selectedCard, setSelectedCard] = useState<SavedListCard | null>(null);
 
@@ -801,15 +904,16 @@ export default function SavedListsView({ onStartAISearch, justSavedListName, onS
         source: "smart",
         sourceLabel: "US Businesses: Smart recommendation",
         chips: [{ label: "Prospects 7.2k", variant: "prospect" as ChipVariant }],
+        prompt: lastSmartPrompt || undefined,
       });
       onSaveComplete?.();
     }, 2800);
 
     return () => { clearTimeout(t1); clearTimeout(t2); clearTimeout(t3); clearTimeout(t4); };
-  }, [justSavedListName, onSaveComplete]);
+  }, [justSavedListName, onSaveComplete, lastSmartPrompt]);
 
   if (selectedCard) {
-    return <SavedListDetail card={selectedCard} onBack={() => setSelectedCard(null)} />;
+    return <SavedListDetail card={selectedCard} onBack={() => setSelectedCard(null)} onRefine={onStartAISearch} />;
   }
 
   return (

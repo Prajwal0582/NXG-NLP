@@ -9,7 +9,7 @@ interface Rect {
 }
 
 const PAD = 6;
-const CARD_WIDTH = 360;
+const CARD_WIDTH = 400;
 const CARD_GAP = 16;
 
 function readRect(selector: string): Rect | null {
@@ -162,10 +162,10 @@ export default function SaveListEducationTour({ onComplete }: SaveListEducationT
           style={{ top: arrowTop }}
           aria-hidden
         />
-        <div className="relative rounded-lg bg-g-white p-6 shadow-[0px_1px_2px_rgba(16,24,40,0.06),0px_1px_3px_rgba(16,24,40,0.1)]">
+        <div className="relative rounded-lg bg-g-white p-6 shadow-[0px_12px_16px_-4px_rgba(16,24,40,0.08),0px_4px_6px_-2px_rgba(16,24,40,0.03)]">
           <div className="flex flex-col gap-6">
             <div className="flex flex-col gap-2">
-              <p className="text-[12px] font-medium leading-[18px] text-g-gray-400">
+              <p className="text-[12px] font-normal leading-[18px] text-g-gray-400">
                 {current.stepLabel}
               </p>
               <h3

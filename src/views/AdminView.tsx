@@ -62,7 +62,19 @@ export default function AdminView({ onBack, onToast }: Props) {
           <AdminSubNav active={page} onSelect={setPage} />
           <div className="min-w-0 flex-1">
             {page === "account-settings" ? (
-              <AccountSettingsPage key={settingsVariant} variant={settingsVariant} onSaved={() => onToast("Account settings saved.")} />
+              <AccountSettingsPage
+                key={settingsVariant}
+                variant={settingsVariant}
+                totalFree={users.reduce((s, u) => s + u.freePromptsLeft, 0)}
+                onSaved={() => onToast("Account settings saved.")}
+                onGrantAll={(n) =>
+                  grantPrompts(
+                    Object.fromEntries(users.map((u) => [u.id, n])),
+                    "Added from Account Settings",
+                    `Entire account (${users.length} users)`,
+                  )
+                }
+              />
             ) : (
               <CreditsPage variant={creditsVariant} users={users} grants={grants} onGrant={grantPrompts} />
             )}
@@ -209,7 +221,8 @@ type SettingItem =
   | { kind: "checkbox-row"; items: { id: string; label: string }[] }
   | { kind: "radio"; id: string; size: "sm" | "md"; options: { value: string; label: string }[] }
   | { kind: "number"; id: string; label: string; suffix?: string; hint?: string }
-  | { kind: "subheading"; label: string };
+  | { kind: "subheading"; label: string }
+  | { kind: "free-prompts" };
 
 interface SettingSection {
   title: string;
@@ -276,7 +289,7 @@ const V1_SECTIONS: SettingSection[] = [
   {
     title: "AI features access",
     description: "Choose which AI features are available for the account",
-    items: [{ kind: "checkbox", id: "nlp", label: "NLP chat (smart search)" }],
+    items: [{ kind: "checkbox", id: "nlp", label: "NLP chat (smart search)" }, { kind: "free-prompts" }],
   },
   { title: "Sharing mode", items: [{ kind: "checkbox", id: "v1_share_none", label: "Share none mode" }] },
   {
@@ -327,6 +340,7 @@ const V2_SECTIONS: SettingSection[] = [
       { kind: "checkbox", id: "v2_smart_outreach", label: "Smart outreach" },
       { kind: "checkbox", id: "v2_smart_audiences", label: "Smart audiences" },
       { kind: "checkbox", id: "nlp", label: "NLP chat (smart search)" },
+      { kind: "free-prompts" },
       { kind: "checkbox", id: "v2_saved_filters", label: "Saved filters access" },
       { kind: "checkbox", id: "v2_hide_emails", label: "Hide Individual Email Addresses" },
     ],
@@ -407,10 +421,22 @@ function itemLabels(item: SettingItem): string[] {
     case "number":
     case "subheading":
       return [item.label];
+    case "free-prompts":
+      return ["Add free prompts"];
   }
 }
 
-function AccountSettingsPage({ variant, onSaved }: { variant: SettingsVariant; onSaved: () => void }) {
+function AccountSettingsPage({
+  variant,
+  totalFree,
+  onSaved,
+  onGrantAll,
+}: {
+  variant: SettingsVariant;
+  totalFree: number;
+  onSaved: () => void;
+  onGrantAll: (n: number) => void;
+}) {
   const [values, setValues] = useState<Values>(savedValues);
   const [query, setQuery] = useState("");
   const sections = variant === "v1" ? V1_SECTIONS : V2_SECTIONS;
@@ -438,7 +464,7 @@ function AccountSettingsPage({ variant, onSaved }: { variant: SettingsVariant; o
             </div>
             <div className="flex flex-col">
               {section.items.map((item, i) => (
-                <SettingRow key={i} item={item} values={values} set={set} />
+                <SettingRow key={i} item={item} values={values} set={set} totalFree={totalFree} />
               ))}
             </div>
           </section>
@@ -450,8 +476,12 @@ function AccountSettingsPage({ variant, onSaved }: { variant: SettingsVariant; o
         <button
           type="button"
           onClick={() => {
-            savedValues = values;
-            onSaved();
+            const grant = parseInt(String(values.free_prompts ?? ""), 10);
+            const next = { ...values, free_prompts: "" };
+            savedValues = next;
+            setValues(next);
+            if (grant > 0) onGrantAll(grant);
+            else onSaved();
           }}
           className="rounded-lg border border-g-blue-600 bg-g-blue-600 px-4 py-2.5 text-sm font-medium leading-5 text-g-white transition-colors hover:bg-g-blue-700"
         >
@@ -469,8 +499,38 @@ function AccountSettingsPage({ variant, onSaved }: { variant: SettingsVariant; o
   );
 }
 
-function SettingRow({ item, values, set }: { item: SettingItem; values: Values; set: (id: string, v: boolean | string) => void }) {
+function SettingRow({
+  item,
+  values,
+  set,
+  totalFree = 0,
+}: {
+  item: SettingItem;
+  values: Values;
+  set: (id: string, v: boolean | string) => void;
+  totalFree?: number;
+}) {
   switch (item.kind) {
+    case "free-prompts":
+      return (
+        <div className="flex items-center gap-4 py-2">
+          <label htmlFor="add-free-prompts" className="text-sm leading-5 text-g-gray-800">
+            Add free prompts
+          </label>
+          <input
+            id="add-free-prompts"
+            type="number"
+            min={0}
+            placeholder="0"
+            value={String(values.free_prompts ?? "")}
+            onChange={(e) => set("free_prompts", e.target.value)}
+            className="h-10 w-[90px] rounded-lg border border-g-gray-300 bg-g-white px-3.5 text-sm leading-5 text-g-gray-800 outline-none placeholder:text-g-gray-400 focus:border-g-blue-600"
+          />
+          <span className="text-sm leading-5 text-g-gray-800">prompts</span>
+          <span className="text-xs leading-[18px] text-g-gray-500">(current balance: {totalFree} free prompts)</span>
+        </div>
+      );
+
     case "subheading":
       return <p className="py-2 text-sm font-medium leading-5 text-g-gray-800">{item.label}</p>;
 
