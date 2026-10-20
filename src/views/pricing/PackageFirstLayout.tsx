@@ -1,4 +1,7 @@
 import { useState, type ReactNode } from "react";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCartShopping, faCoins, faTag, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faCircleCheck, faEye } from "@fortawesome/free-regular-svg-icons";
 import type { FeatureItem, GoalId, PlanId } from "../../data/pricingPlans";
 import {
   BUY_LIST_PLAN,
@@ -98,7 +101,7 @@ function InfoTip({ text }: { text: string }) {
 
 function AddonChip() {
   return (
-    <span className="inline-flex h-5 items-center rounded px-1.5 text-[10px] font-medium leading-4 text-[#F8F7FF] bg-[#764FD9]">
+    <span className="inline-flex h-6 shrink-0 items-center rounded px-2 text-xs font-medium leading-[18px] text-[#F6F8FC] bg-[#764FD9]">
       Add-on
     </span>
   );
@@ -221,13 +224,15 @@ function PlanFeatureChecklist({
         <div className="mt-auto flex flex-col gap-3 pt-2 border-t border-[#EAECF0]">
           <p className="text-sm font-semibold leading-5 text-[#667085]">Additional paid features</p>
           {plan.addons.map((addon) => (
-            <div key={addon.label} className="flex items-center gap-2">
-              <PlusIcon />
-              <span className="text-sm font-normal leading-5 text-[#475467]">{addon.label}</span>
+            <div key={addon.label} className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                <PlusIcon />
+                <span className="text-sm font-normal leading-5 text-[#475467]">{addon.label}</span>
+                {addon.info && resolveTooltip(addon.label) ? (
+                  <InfoTip text={resolveTooltip(addon.label)!} />
+                ) : null}
+              </div>
               <AddonChip />
-              {addon.info && resolveTooltip(addon.label) ? (
-                <InfoTip text={resolveTooltip(addon.label)!} />
-              ) : null}
             </div>
           ))}
         </div>
@@ -280,87 +285,36 @@ function GoalIcon({ id, selected }: { id: GoalId; selected: boolean }) {
   );
 }
 
+const FACT_ICONS = { Access: faEye, Credits: faCoins, Users: faUsers, Purchase: faCartShopping, Price: faTag };
+
 function FactIcon({ label }: { label: string }) {
-  const common = "size-3.5 shrink-0 text-[#008DC3]";
-  if (label === "Access") {
-    return (
-      <svg viewBox="0 0 14 14" fill="none" className={common} aria-hidden>
-        <path d="M1.5 7s2.2-3.5 5.5-3.5S12.5 7 12.5 7s-2.2 3.5-5.5 3.5S1.5 7 1.5 7z" stroke="currentColor" strokeWidth="1.2" />
-        <circle cx="7" cy="7" r="1.6" stroke="currentColor" strokeWidth="1.2" />
-      </svg>
-    );
-  }
-  if (label === "Credits") {
-    return (
-      <svg viewBox="0 0 14 14" fill="none" className={common} aria-hidden>
-        <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2" />
-        <path d="M7 4v6M5.2 5.5h2.4a1.4 1.4 0 010 2.8H5.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (label === "Users") {
-    return (
-      <svg viewBox="0 0 14 14" fill="none" className={common} aria-hidden>
-        <circle cx="5.5" cy="5" r="2" stroke="currentColor" strokeWidth="1.2" />
-        <path d="M2 11.5c.4-1.8 1.8-2.8 3.5-2.8s3.1 1 3.5 2.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-        <circle cx="10" cy="5.5" r="1.5" stroke="currentColor" strokeWidth="1.2" />
-        <path d="M9.2 11.5c.2-1 1-1.8 2.2-1.8.4 0 .8.1 1.1.2" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    );
-  }
-  if (label === "Purchase") {
-    return (
-      <svg viewBox="0 0 14 14" fill="none" className={common} aria-hidden>
-        <rect x="2" y="3.5" width="10" height="7.5" rx="1.2" stroke="currentColor" strokeWidth="1.2" />
-        <path d="M2 6h10" stroke="currentColor" strokeWidth="1.2" />
-      </svg>
-    );
-  }
-  if (label === "Price") {
-    return (
-      <svg viewBox="0 0 14 14" fill="none" className={common} aria-hidden>
-        <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2" />
-        <path d="M7 4.2v5.6M5.5 5.5h2.2a1.2 1.2 0 010 2.4H5.5" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
-      </svg>
-    );
-  }
+  const icon = FACT_ICONS[label as keyof typeof FACT_ICONS] ?? faCircleCheck;
   return (
-    <svg viewBox="0 0 14 14" fill="none" className={common} aria-hidden>
-      <circle cx="7" cy="7" r="5" stroke="currentColor" strokeWidth="1.2" />
-    </svg>
+    <span className="flex h-3.5 w-[18px] shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+      <FontAwesomeIcon icon={icon} className="text-[14px]" />
+    </span>
   );
 }
 
-/**
- * Compact vertical facts — fixed height so all package cards align;
- * smaller type keeps credits on one line. `emphasize` bolds key values.
- */
+/** Plan facts — height fits content (one- and two-line values keep the same 10px padding). */
 function PlanFacts({
   items,
 }: {
   items: { label: string; value: ReactNode; emphasize?: boolean }[];
 }) {
   return (
-    <div className="box-border h-full min-h-[92px] rounded-lg bg-[#F0F9FF] border border-[#D6EAF5] px-3 py-2.5">
-      <div className="flex h-full flex-col justify-center gap-2">
-        {items.map((item) => (
-          <div key={item.label} className="flex min-w-0 items-start gap-1.5">
-            <span className="pt-px"><FactIcon label={item.label} /></span>
-            <p className="min-w-0 flex-1 text-[11px] leading-4 break-words">
-              <span className="font-semibold uppercase tracking-wide text-[#667085]">
-                {item.label}:
-              </span>{" "}
-              <span
-                className={`text-[#1D2939] ${
-                  item.emphasize ? "font-bold" : "font-medium text-[#344054]"
-                }`}
-              >
-                {item.value}
-              </span>
-            </p>
-          </div>
-        ))}
-      </div>
+    <div className="box-border flex flex-col gap-2 rounded-lg bg-[#F0F9FF] border border-[#D6EAF5] px-3 py-2.5">
+      {items.map((item) => (
+        <div key={item.label} className="flex min-w-0 items-center gap-1.5">
+          <FactIcon label={item.label} />
+          <p className="min-w-0 flex-1 text-xs leading-[18px] break-words">
+            <span className="font-semibold uppercase text-[#667085]">{item.label}:</span>{" "}
+            <span className={item.emphasize ? "font-semibold text-[#1D2939]" : "font-medium text-[#344054]"}>
+              {item.value}
+            </span>
+          </p>
+        </div>
+      ))}
     </div>
   );
 }
@@ -463,7 +417,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                       Annual Billing
                     </button>
                     {/* ~16.67% from 10 months paid / 12 months access → display Save 17% */}
-                    <span className="pointer-events-none absolute left-1/2 top-[32px] z-10 -translate-x-1/2 inline-flex h-7 items-center justify-center rounded-md px-3 text-xs font-bold leading-[18px] tracking-wide bg-[#FEC84B] text-[#101828] border-2 border-[#DC6803] shadow-[0_2px_4px_rgba(180,83,9,0.28)] whitespace-nowrap">
+                    <span className="pointer-events-none absolute left-1/2 top-[32px] z-10 -translate-x-1/2 inline-flex h-7 items-center justify-center rounded px-2 text-sm font-medium leading-5 bg-[#FFF6F2] text-[#C55418] whitespace-nowrap">
                       Save 17%
                     </span>
                   </div>
@@ -471,17 +425,15 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
 
                 {/* Annual savings callout — positive green; reserved space (no flicker) */}
                 <div
-                  className={`flex min-h-[52px] w-full sm:max-w-[300px] items-center gap-2.5 rounded-lg border-2 border-[#12B76A] bg-[#DCFAE6] px-3 py-2.5 shadow-[0_1px_3px_rgba(18,183,106,0.18)] transition-opacity duration-0 ${
+                  className={`flex w-full sm:max-w-[320px] items-start gap-2 rounded-lg border border-[#CDE9E0] bg-[#F2F9F7] p-4 transition-opacity duration-0 ${
                     billing === "annual" ? "opacity-100" : "opacity-0"
                   }`}
                   aria-hidden={billing !== "annual"}
                 >
-                  <span className="shrink-0 size-5 flex items-center justify-center rounded-full bg-[#12B76A]">
-                    <svg viewBox="0 0 14 14" fill="none" className="size-3" aria-hidden>
-                      <path d="M3.5 7l2.5 2.5 4.5-4.5" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                    </svg>
+                  <span className="shrink-0 pt-0.5 text-[#026B5C]" aria-hidden>
+                    <FontAwesomeIcon icon={faCircleCheck} className="text-[14px]" />
                   </span>
-                  <p className="text-xs font-medium leading-[18px] text-[#054F31]">
+                  <p className="text-xs font-medium leading-[18px] text-[#026B5C]">
                     Pay only for 10 months and get 12 months access + 1,000 bonus credits.
                   </p>
                 </div>
@@ -555,7 +507,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     onSelectCard(plan.id);
                   }
                 }}
-                className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-5 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
+                className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-4 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
                   isSelected
                     ? "border-[#B9D9EC]"
                     : "border-[#D0D5DD] hover:border-[#98A2B3]"
@@ -563,7 +515,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 style={{ boxShadow: CARD_SHADOW }}
               >
                 {/* Row 1 — header (overlays live here so subgrid stays 5 children) */}
-                <div className={`relative px-4 sm:px-5 pt-8 sm:pt-9 pb-3 rounded-t-xl self-stretch ${HEADER_SURFACE[plan.id]}`}>
+                <div className={`relative px-4 pt-6 pb-4 rounded-t-xl self-stretch ${HEADER_SURFACE[plan.id]}`}>
                   {isSelected && (
                     <div
                       aria-hidden
@@ -571,8 +523,8 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     />
                   )}
                   {showBadge && <PlanBadge label={activeBadgeLabel} />}
-                  <div className="flex flex-col gap-1">
-                    <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">
+                  <div className="flex flex-col gap-2">
+                    <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">
                       {plan.category}
                     </p>
                     <h3 className="text-2xl font-semibold leading-8 text-[#008DC3]">{plan.name}</h3>
@@ -581,20 +533,20 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
 
                 {/* Row 2 — price + discount (left-aligned; 20px gap under price) */}
-                <div className="px-5 pt-2 pb-0 self-start w-full">
+                <div className="p-4 self-start w-full">
                   <div className="flex flex-col">
                     <div className="flex items-start gap-1.5">
                       <span className="text-sm font-normal leading-5 text-[#475467] pt-1.5 shrink-0">
                         Starting
                       </span>
                       <p className="inline-flex items-start font-semibold text-[#1D2939] tracking-[-0.72px]">
-                        <span className="text-[22px] leading-7 mt-0.5">$</span>
+                        <span className="text-xl leading-[30px] mt-1">$</span>
                         <span className="text-[36px] leading-[44px]">{pricing.display}</span>
-                        <span className="text-base leading-6 mt-2.5 font-semibold">{pricing.suffix}</span>
+                        <span className="text-base leading-6 mt-3.5 font-semibold">{pricing.suffix}</span>
                       </p>
                     </div>
                     <div
-                      className={`mt-5 text-sm leading-5 ${
+                      className={`mt-4 text-sm leading-5 ${
                         billing === "annual" ? "text-[#0D7867]" : "text-[#475467]"
                       }`}
                     >
@@ -615,7 +567,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
 
                 {/* Row 3 — CTA */}
-                <div className="px-5 pt-3 self-stretch">
+                <div className="p-4 self-stretch">
                   <button
                     type="button"
                     onClick={(e) => {
@@ -633,7 +585,8 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
 
                 {/* Row 4 — plan facts (blue box below CTA) */}
-                <div className="px-5 pt-3 self-stretch">
+                <div className="flex flex-col self-stretch h-full min-h-0">
+                <div className="px-4">
                   <PlanFacts
                     items={[
                       { label: "Access", value: summary.access },
@@ -652,12 +605,13 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
 
                 {/* Row 5 — feature checklists; addons bottom-aligned across cards */}
-                <div className="px-5 pb-6 pt-5 mt-1 border-t border-[#EAECF0] self-stretch h-full min-h-0">
+                <div className="px-4 py-6 flex-1 min-h-0">
                   <PlanFeatureChecklist
                     plan={fullPlan}
                     expanded={expanded}
                     onToggle={toggleExpand}
                   />
+                </div>
                 </div>
               </div>
             );
@@ -676,14 +630,14 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 onSelectCard("buy-list");
               }
             }}
-            className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-5 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
+            className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-4 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
               buySelected
                 ? "border-[#B9D9EC]"
                 : "border-[#D0D5DD] hover:border-[#98A2B3]"
             }`}
             style={{ boxShadow: CARD_SHADOW }}
           >
-            <div className={`relative px-4 sm:px-5 pt-8 sm:pt-9 pb-3 rounded-t-xl self-stretch ${HEADER_SURFACE["buy-list"]}`}>
+            <div className={`relative px-4 pt-6 pb-4 rounded-t-xl self-stretch ${HEADER_SURFACE["buy-list"]}`}>
               {buySelected && (
                 <div
                   aria-hidden
@@ -691,8 +645,8 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 />
               )}
               {buyBadge && <PlanBadge label={activeBadgeLabel} />}
-              <div className="flex flex-col gap-1">
-                <p className="text-xs font-medium uppercase tracking-wide text-[#667085]">
+              <div className="flex flex-col gap-2">
+                <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">
                   {buyPlan.category}
                 </p>
                 <h3 className="text-2xl font-semibold leading-8 text-[#008DC3]">{buyPlan.name}</h3>
@@ -700,19 +654,19 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
               </div>
             </div>
 
-            <div className="px-5 pt-2 pb-0 self-start w-full">
+            <div className="p-4 self-start w-full">
               <div className="flex flex-col">
                 {buyListPriceDisplay === "Custom price" ? (
-                  <p className="font-semibold text-[#1D2939] text-[32px] leading-10 tracking-tight">
+                  <p className="font-semibold text-[#1D2939] text-[36px] leading-[44px] tracking-[-0.72px]">
                     Custom price
                   </p>
                 ) : (
                   <p className="inline-flex items-start font-semibold text-[#1D2939] tracking-[-0.72px]">
-                    <span className="text-[22px] leading-7 mt-0.5">$</span>
+                    <span className="text-xl leading-[30px] mt-1">$</span>
                     <span className="text-[36px] leading-[44px]">{buyListPriceDisplay}</span>
                   </p>
                 )}
-                <div className="mt-5 text-sm leading-5 text-[#0D7867]">
+                <div className="mt-4 text-sm leading-5 text-[#0D7867]">
                   {buyListSupportLines.map((line) => (
                     <p key={line}>{line}</p>
                   ))}
@@ -720,7 +674,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
               </div>
             </div>
 
-            <div className="px-5 pt-3 self-stretch">
+            <div className="p-4 self-stretch">
               <button
                 type="button"
                 onClick={(e) => {
@@ -737,7 +691,8 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
               </button>
             </div>
 
-            <div className="px-5 pt-3 self-stretch">
+            <div className="flex flex-col self-stretch h-full min-h-0">
+            <div className="px-4">
               <PlanFacts
                 items={[
                   { label: "Purchase", value: "One-time" },
@@ -753,12 +708,13 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
               />
             </div>
 
-            <div className="px-5 pb-6 pt-5 mt-1 border-t border-[#EAECF0] self-stretch h-full min-h-0">
+            <div className="px-4 py-6 flex-1 min-h-0">
               <PlanFeatureChecklist
                 plan={buyPlan}
                 expanded={expanded}
                 onToggle={toggleExpand}
               />
+            </div>
             </div>
           </div>
         </div>

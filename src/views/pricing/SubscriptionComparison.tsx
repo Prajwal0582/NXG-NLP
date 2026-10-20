@@ -147,15 +147,15 @@ export default function SubscriptionComparison({
             className="sticky top-0 z-30 grid h-[156px] box-border bg-white border-b border-[#EAECF0]"
             style={COMPARE_GRID}
           >
-            <div className="px-6 py-4 flex flex-col justify-center gap-2 self-stretch max-h-[156px]">
-              <h2 className="text-lg font-semibold leading-7 text-[#008DC3]">
-                Compare subscription plans
-              </h2>
-              <p className="text-xs font-normal leading-[18px] text-[#1D2939] max-w-[280px]">
-                Dig into the details when you need validation
-                <br />
-                pricing cards remain the primary path to choose.
-              </p>
+            <div className="px-6 py-4 flex flex-col justify-center self-stretch max-h-[156px]">
+              <div className="px-3 flex flex-col gap-2">
+                <h2 className="text-base font-semibold leading-6 text-[#008DC3]">
+                  Compare subscription plans
+                </h2>
+                <p className="text-xs font-normal leading-[18px] text-[#1D2939]">
+                  Dig into the details when you need validation pricing cards remain the primary path to choose.
+                </p>
+              </div>
             </div>
             {(["basic", "pro", "team"] as const).map((id) => {
               const plan = PLANS.find((p) => p.id === id)!;
@@ -163,26 +163,25 @@ export default function SubscriptionComparison({
               return (
                 <div
                   key={id}
-                  className="min-w-0 px-3 xl:px-6 py-4 flex flex-col items-center justify-center gap-2 bg-white self-stretch max-h-[156px]"
+                  className="min-w-0 px-3 xl:px-6 py-4 flex flex-col justify-center bg-white self-stretch max-h-[156px]"
                 >
-                  <div className="flex w-full flex-col items-center">
-                    <p className="h-7 w-full text-center text-lg font-medium leading-7 text-[#008DC3]">
-                      {plan.name}
-                    </p>
-                    <p className="flex h-11 items-start justify-center tracking-tight text-[#1D2939]">
-                      <span className="text-[10px] font-semibold leading-[44px]">$</span>
-                      <span className="self-center text-sm font-medium leading-5">
-                        {pricing.display}{pricing.suffix}
-                      </span>
-                    </p>
-                  </div>
+                  <div className="px-3 flex flex-col items-center gap-4">
+                    <div className="flex w-full flex-col items-center gap-1">
+                      <p className="w-full text-center text-lg font-medium leading-7 text-[#008DC3]">
+                        {plan.name}
+                      </p>
+                      <p className="w-full text-center text-2xl font-medium leading-8 text-[#1D2939]">
+                        ${pricing.display}{pricing.suffix}
+                      </p>
+                    </div>
                   <button
                     type="button"
                     onClick={() => onSelectPlan(id, billing)}
-                    className="w-full max-w-[248px] rounded-md text-sm font-medium leading-5 bg-white text-[#475467] border border-[#D0D5DD] px-3 py-1.5 hover:bg-[#F9FAFB]"
+                    className="w-full rounded-md text-sm font-medium leading-5 bg-white text-[#475467] border border-[#D0D5DD] px-3 py-1.5 hover:bg-[#F9FAFB]"
                   >
                     {plan.cta}
                   </button>
+                  </div>
                 </div>
               );
             })}
