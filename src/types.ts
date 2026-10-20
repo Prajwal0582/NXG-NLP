@@ -8,7 +8,8 @@ export type View =
   | 'purchase'
   | 'purchase-success'
   | 'plans'
-  | 'subscription-checkout';
+  | 'subscription-checkout'
+  | 'admin';
 
 export type BillingPeriod = 'monthly' | 'annual';
 export type SelectedPlanId = 'basic' | 'pro' | 'team';

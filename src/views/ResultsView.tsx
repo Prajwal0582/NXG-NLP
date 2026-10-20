@@ -32,6 +32,9 @@ interface Turn {
   resultSnapshot?: TurnResultPayload;
   /** Appended once when this turn consumed the final free freemium prompt. */
   showFreePromptsExhausted?: boolean;
+  slowResponse?: boolean;
+  timeoutPhase?: "soft" | "escalated" | "error";
+  timedOut?: boolean;
 }
 
 interface TurnResultPayload {
@@ -65,6 +68,7 @@ interface ResultsViewProps {
   showCreditCoach: boolean;
   onDismissCreditCoach: () => void;
   onBack: () => void;
+  onManualSearch: () => void;
   onNewChat: () => void;
   onHistory: () => void;
   onPurchaseList: (resultCount: number) => void;
@@ -411,10 +415,12 @@ function InlineProcessingBlock({
     "Applying filters and match criteria",
     "Ranking leads by match score and contact quality",
   ],
+  timeoutPhase,
 }: {
   stepStatuses: StepStatus[];
   frozen?: boolean;
   descs?: [string, string, string] | string[];
+  timeoutPhase?: "soft" | "escalated" | "error";
 }) {
   const executing = !frozen && stepStatuses.some(s => s === "active");
   const steps = PROCESSING_STEP_LABELS.map((label, i) => ({ label, desc: descs[i] ?? "" }));
@@ -465,6 +471,81 @@ function InlineProcessingBlock({
           </span>
         </div>
       )}
+      {executing && timeoutPhase && timeoutPhase !== "error" && (
+        <TimeoutBanner phase={timeoutPhase} />
+      )}
+    </div>
+  );
+}
+
+// ─── Slow-response detection ──────────────────────────────────────────────────
+
+const SLOW_QUERY_HINT = /\b(nationwide|national|every\s+state|all\s+states|entire\s+country|coast\s+to\s+coast)\b/i;
+
+function isSlowQuery(prompt: string): boolean {
+  return SLOW_QUERY_HINT.test(prompt);
+}
+
+// ─── Timeout banners (progressive reassurance) ───────────────────────────────
+
+function TimeoutBanner({ phase }: { phase: "soft" | "escalated" }) {
+  const isSoft = phase === "soft";
+  return (
+    <div className={`mt-4 ml-[22px] flex items-center gap-2.5 rounded-lg px-3.5 py-2.5 w-fit animate-fade-in ${
+      isSoft
+        ? "bg-[#fffaeb] border border-[#fedf89]"
+        : "bg-[#eff8ff] border border-[#b2ddff]"
+    }`}>
+      <svg viewBox="0 0 16 16" fill="none" className={`size-4 shrink-0 ${isSoft ? "text-[#dc6803]" : "text-[#1570ef]"}`} stroke="currentColor" strokeWidth="1.5">
+        <circle cx="8" cy="8" r="6.5" />
+        <path d="M8 5v3.5l2 2" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+      <span className={`text-sm ${isSoft ? "text-[#b54708]" : "text-[#175cd3]"}`}>
+        {isSoft
+          ? "This search is taking longer than usual — hang tight"
+          : "Still working on it — complex queries can take up to 3 minutes"}
+      </span>
+    </div>
+  );
+}
+
+function TimeoutErrorState({ onRetry, onManualSearch }: { onRetry: () => void; onManualSearch: () => void }) {
+  return (
+    <div className="animate-fade-in">
+      <div className="flex items-center gap-2 mb-3">
+        <SparkleIcon />
+        <span className="text-sm font-semibold text-[#1d2939]">SignalFuse</span>
+      </div>
+      <div className="bg-[#f9fafb] border border-[#e4e7ec] rounded-xl px-5 py-5">
+        <div className="flex items-start gap-3">
+          <div className="size-10 rounded-full bg-[#f2f4f7] flex items-center justify-center shrink-0 mt-0.5">
+            <svg viewBox="0 0 20 20" fill="none" className="size-5 text-[#667085]" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="10" cy="10" r="8" />
+              <path d="M10 5v3.5l2 2" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </div>
+          <div className="flex-1">
+            <h4 className="text-[15px] font-semibold text-[#344054] mb-1">This query needs a narrower scope</h4>
+            <p className="text-sm text-[#667085] leading-relaxed mb-4">
+              Broad searches like this can take longer than expected. Try narrowing by location, industry, or size to get faster, more relevant results.
+            </p>
+            <div className="flex items-center gap-2.5">
+              <button
+                onClick={onManualSearch}
+                className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors"
+              >
+                Continue with manual search
+              </button>
+              <button
+                onClick={onRetry}
+                className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] hover:bg-[#f9fafb] rounded-lg transition-colors"
+              >
+                Retry search
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -844,6 +925,7 @@ export default function ResultsView({
   showCreditCoach,
   onDismissCreditCoach,
   onBack,
+  onManualSearch,
   onNewChat,
   onHistory,
   onPurchaseList,
@@ -858,7 +940,7 @@ export default function ResultsView({
   const [turns, setTurns] = useState<Turn[]>([]);
   const [followUpInput, setFollowUpInput] = useState("");
   // Smart-friction confirm shown only when the credit balance is low.
-  const [lowBalancePrompt, setLowBalancePrompt] = useState<string | null>(null);
+  const [lowBalanceDismissed, setLowBalanceDismissed] = useState(false);
 
   const nextId = useRef(0);
   const booted = useRef(false);
@@ -960,9 +1042,9 @@ export default function ResultsView({
   // Add a turn and run its processing animation. When `frozen` (user is out of
   // prompts), the block is added greyed and stuck — no timers run, so it never
   // completes and no data is ever generated.
-  const addTurn = useCallback((p: string, frozen = false, invalid = false, showFreePromptsExhausted = false) => {
+  const addTurn = useCallback((p: string, frozen = false, invalid = false, showFreePromptsExhausted = false, slow = false) => {
     const id = nextId.current++;
-    setTurns(prev => [...prev, { id, prompt: p, stepStatuses: ["waiting", "waiting", "waiting"], isComplete: false, frozen, invalid, showFreePromptsExhausted }]);
+    setTurns(prev => [...prev, { id, prompt: p, stepStatuses: ["waiting", "waiting", "waiting"], isComplete: false, frozen, invalid, showFreePromptsExhausted, slowResponse: slow }]);
     if (frozen || invalid) {
       if (invalid) setTimeout(() => setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, isComplete: true })), 600);
       return;
@@ -970,6 +1052,26 @@ export default function ResultsView({
 
     const upd = (stepIdx: number, status: StepStatus) =>
       setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, stepStatuses: t.stepStatuses.map((s, i) => i === stepIdx ? status : s) as StepStatus[] }));
+
+    const setPhase = (phase: Turn["timeoutPhase"]) =>
+      setTurns(prev => prev.map(t => t.id !== id ? t : { ...t, timeoutPhase: phase }));
+
+    if (slow) {
+      setTimeout(() => upd(0, "active"), 80);
+      setTimeout(() => { upd(0, "done"); upd(1, "active"); }, 2000);
+      setTimeout(() => { upd(1, "done"); upd(2, "active"); }, 4000);
+      setTimeout(() => setPhase("soft"), 7000);
+      setTimeout(() => setPhase("escalated"), 14000);
+      setTimeout(() => {
+        setTurns(prev => prev.map(t => t.id !== id ? t : {
+          ...t,
+          timeoutPhase: "error",
+          timedOut: true,
+          stepStatuses: ["done", "done", "waiting"] as StepStatus[],
+        }));
+      }, 22000);
+      return;
+    }
 
     setTimeout(() => upd(0, "active"), 80);
     setTimeout(() => { upd(0, "done"); upd(1, "active"); }, 1200);
@@ -1017,7 +1119,7 @@ export default function ResultsView({
     if (skipAnimation) {
       addTurnInstant(prompt, freePromptsJustExhausted);
     } else {
-      addTurn(prompt, shouldFreeze, prompt.trim() === "123", freePromptsJustExhausted);
+      addTurn(prompt, shouldFreeze, prompt.trim() === "123", freePromptsJustExhausted, isSlowQuery(prompt));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1032,7 +1134,7 @@ export default function ResultsView({
       addTurnInstant(prompt, freePromptsJustExhausted);
     } else {
       setTurns([]);
-      addTurn(prompt, shouldFreeze, prompt.trim() === "123", freePromptsJustExhausted);
+      addTurn(prompt, shouldFreeze, prompt.trim() === "123", freePromptsJustExhausted, isSlowQuery(prompt));
     }
   }, [prompt, skipAnimation]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -1046,7 +1148,7 @@ export default function ResultsView({
   function sendPrompt(p: string) {
     const exhaustedByThis = free && promptsRemaining === 1;
     onFollowUp(p);
-    addTurn(p, false, false, exhaustedByThis);
+    addTurn(p, false, false, exhaustedByThis, isSlowQuery(p));
     setFollowUpInput("");
   }
 
@@ -1060,18 +1162,17 @@ export default function ResultsView({
       setFollowUpInput("");
       return;
     }
-    if (isCreditMode) {
-      if (isLowCredit) { setLowBalancePrompt(trimmed); return; }
-      sendPrompt(trimmed);
-      return;
-    }
     sendPrompt(trimmed);
   }
 
-  function handleLowBalanceContinue() {
-    if (!lowBalancePrompt) return;
-    sendPrompt(lowBalancePrompt);
-    setLowBalancePrompt(null);
+  function handleRetry(turnPrompt: string) {
+    addTurn(turnPrompt, false, false, false, false);
+  }
+
+  function handleModifySearch() {
+    const input = document.querySelector<HTMLInputElement>('input[placeholder*="refine"]') ??
+                  document.querySelector<HTMLInputElement>('input[placeholder*="Upgrade"]');
+    input?.focus();
   }
 
   function handleKey(e: React.KeyboardEvent) {
@@ -1124,7 +1225,12 @@ export default function ResultsView({
               <div key={turn.id} className="mb-8">
                 <UserBubble prompt={turn.prompt} />
 
-                {turn.invalid && turn.isComplete ? (
+                {turn.timedOut ? (
+                  <TimeoutErrorState
+                    onRetry={() => handleRetry(turn.prompt)}
+                    onManualSearch={onManualSearch}
+                  />
+                ) : turn.invalid && turn.isComplete ? (
                   <div className="animate-fade-in mt-3">
                     <div className="flex items-center gap-2 mb-3">
                       <SparkleIcon />
@@ -1137,6 +1243,7 @@ export default function ResultsView({
                     stepStatuses={turn.stepStatuses}
                     frozen={turn.frozen}
                     descs={searchScenario.processingDescs}
+                    timeoutPhase={turn.timeoutPhase}
                   />
                 ) : payload ? (
                   <ScenarioResultBody
@@ -1160,27 +1267,29 @@ export default function ResultsView({
       <div className="shrink-0 bg-white border-t border-[#eaecf0] shadow-[0_-4px_20px_rgba(0,0,0,0.07)]">
         <div className="mx-auto py-4 relative max-w-[1150px] px-4">
 
-          {/* Smart-friction: low-balance confirm (only when credits are low) */}
-          {lowBalancePrompt && (
-            <div className="absolute bottom-full left-0 right-0 mb-2 animate-fade-in">
-              <div className="bg-[#f0f9ff] border border-[#bae6fd] rounded-xl shadow-lg px-4 py-3.5 flex items-center justify-between gap-4">
-                <div className="flex items-start gap-2.5">
-                  <span className="mt-0.5"><LightningIcon /></span>
-                  <div>
-                    <p className="text-sm font-semibold text-[#1d2939]">Low balance — {creditsRemaining} credits left</p>
-                    <p className="text-xs text-[#475467] mt-0.5">This prompt uses 2 credits.</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <button onClick={() => { setLowBalancePrompt(null); onBuyCredits(); }} className="px-3.5 py-1.5 text-xs font-medium text-[#344054] border border-[#d0d5dd] rounded-lg bg-white hover:bg-[#f9fafb] transition-colors">Top up</button>
-                  <button onClick={handleLowBalanceContinue} className="px-3.5 py-1.5 text-xs font-semibold text-white bg-[#016dee] hover:bg-[#0052cc] rounded-lg transition-colors">Continue</button>
-                </div>
+          {/* Subscriber low-balance bar */}
+          {isLowCredit && !isCreditExhausted && !lowBalanceDismissed && (
+            <div className="flex items-center justify-between gap-3 bg-[#344054] rounded-lg px-5 py-3 mb-2">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#d0d5dd" strokeWidth="1.5">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-white">Low balance · {creditsRemaining} credits left</p>
+              </div>
+              <div className="flex items-center gap-3 shrink-0">
+                <button onClick={onBuyCredits} className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors whitespace-nowrap">Buy credits</button>
+                <button onClick={() => setLowBalanceDismissed(true)} aria-label="Dismiss" className="text-[#d0d5dd] hover:text-white transition-colors">
+                  <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.8">
+                    <path d="M3 3l8 8M11 3l-8 8" strokeLinecap="round" />
+                  </svg>
+                </button>
               </div>
             </div>
           )}
 
           {/* First-prompt coach tip (once per session, subscriber-credit only) */}
-          {isCredit && showCreditCoach && !lowBalancePrompt && (
+          {isCredit && showCreditCoach && !isLowCredit && (
             <div className="absolute bottom-full right-4 mb-2 w-72 animate-fade-in">
               <div className="bg-[#1d2939] text-white rounded-xl shadow-xl px-4 py-3">
                 <div className="flex items-start gap-2.5">
@@ -1195,54 +1304,53 @@ export default function ResultsView({
             </div>
           )}
 
-          {/* Freemium low-balance inline alert */}
+          {/* Freemium low-balance bar */}
           {isLowPrompt && !isExhausted && (
-            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="8" cy="8" r="6.5" />
-                    <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
-                  </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">{promptsRemaining} free prompts remaining.</p>
-                </div>
-                <p className="text-sm text-[#b54708] ml-6">Upgrade for unlimited access to this feature.</p>
+            <div className="flex items-center justify-between gap-3 bg-[#1d2939] rounded-lg px-5 py-3 mb-2">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#98a2b3" strokeWidth="1.5">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-white"><span className="font-semibold">{promptsRemaining} free prompts remaining.</span> <span className="text-[#d0d5dd]">Upgrade for unlimited access to this feature.</span></p>
               </div>
-              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
+              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
             </div>
           )}
 
-          {/* Freemium exhausted inline alert */}
+          {/* Freemium exhausted bar */}
           {free && promptsRemaining <= 0 && (
-            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
-                    <circle cx="8" cy="8" r="6.5" />
-                    <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
-                  </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">0 free prompts left.</p>
-                </div>
-                <p className="text-sm text-[#b54708] ml-6">Upgrade for unlimited access to this feature.</p>
+            <div className="flex items-center justify-between gap-3 bg-[#1d2939] rounded-lg px-5 py-3 mb-2">
+              <div className="flex items-center gap-2">
+                <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0" stroke="#98a2b3" strokeWidth="1.5">
+                  <circle cx="8" cy="8" r="6.5" />
+                  <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
+                </svg>
+                <p className="text-sm text-white"><span className="font-semibold">0 free prompts left.</span> <span className="text-[#d0d5dd]">Upgrade for unlimited access to this feature.</span></p>
               </div>
-              <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Upgrade account</button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={onManualSearch} className="px-4 py-2 text-sm font-semibold text-white border border-[#475467] rounded-lg hover:bg-[#344054] transition-colors whitespace-nowrap">Go to manual search</button>
+                <button onClick={onPlans} className="px-4 py-2 text-sm font-semibold text-white bg-[#008dc3] hover:bg-[#007aab] rounded-lg transition-colors whitespace-nowrap">Upgrade account</button>
+              </div>
             </div>
           )}
 
-          {/* Subscriber credits exhausted inline alert */}
+          {/* Subscriber credits exhausted bar */}
           {isCreditExhausted && (
-            <div className="flex items-center justify-between gap-3 bg-[#fef6ee] border border-[#f9dbaf] rounded-lg px-4 py-3.5 mb-2">
-              <div className="flex flex-col gap-0.5">
-                <div className="flex items-center gap-2">
-                  <svg viewBox="0 0 16 16" fill="none" className="size-4 shrink-0 text-[#dc6803]" stroke="currentColor" strokeWidth="1.5">
+            <div className="flex items-center gap-1 bg-g-gray-700 border border-g-gray-500 rounded-lg p-4 mb-2">
+              <div className="flex flex-1 min-w-0 flex-col gap-1">
+                <div className="flex items-start gap-2">
+                  <svg viewBox="0 0 16 16" fill="none" className="size-3.5 shrink-0 mt-0.5" stroke="white" strokeWidth="1.5">
                     <circle cx="8" cy="8" r="6.5" />
                     <path d="M8 5h.01M8 7.5v3.5" strokeLinecap="round" />
                   </svg>
-                  <p className="text-sm font-semibold text-[#b54708]">Insufficient credit balance</p>
+                  <p className="text-xs font-medium leading-[18px] text-white">Insufficient credit balance</p>
                 </div>
-                <p className="text-sm text-[#b54708] ml-6">Your account credits have been exhausted. Purchase more credits to continue using Smart search.</p>
+                <p className="text-xs leading-[18px] text-g-gray-300">Your account credits have been exhausted. Purchase more credits to continue using Smart search.</p>
               </div>
-              <button onClick={onBuyCredits} className="px-4 py-2 text-sm font-semibold text-[#344054] bg-white border border-[#d0d5dd] rounded-lg hover:bg-[#f9fafb] transition-colors whitespace-nowrap shrink-0">Buy credits</button>
+              <div className="px-2 shrink-0">
+                <button onClick={onBuyCredits} className="px-3 py-1.5 text-sm leading-5 text-white bg-g-blue-600 border border-g-blue-600 hover:bg-g-blue-700 rounded-md transition-colors whitespace-nowrap">Buy credits</button>
+              </div>
             </div>
           )}
 

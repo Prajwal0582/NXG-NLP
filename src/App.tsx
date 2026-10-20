@@ -12,6 +12,7 @@ import Toast from "./components/Toast";
 import SaveListModal from "./components/SaveListModal";
 import SaveListEducationTour from "./components/SaveListEducationTour";
 import CreditMilestoneModal from "./components/CreditMilestoneModal";
+import CreditBalanceEducationTour from "./components/CreditBalanceEducationTour";
 import {
   inferSearchDataset,
   hasCompletedSavedListEducation,
@@ -29,6 +30,7 @@ import PurchaseView from "./views/PurchaseView";
 import PurchaseSuccessView from "./views/PurchaseSuccessView";
 import PlansView from "./views/PlansView";
 import SubscriptionCheckoutView from "./views/SubscriptionCheckoutView";
+import AdminView from "./views/AdminView";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
@@ -81,6 +83,7 @@ export default function App() {
   const [saveCoachOpen, setSaveCoachOpen] = useState(false);
   const [searchDataset, setSearchDataset] = useState<ActiveTab>("business");
   const [milestoneModalOpen, setMilestoneModalOpen] = useState(false);
+  const [creditEducationOpen, setCreditEducationOpen] = useState(false);
   const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
 
   const [freeTotal, setFreeTotal] = useState(20);
@@ -287,7 +290,7 @@ export default function App() {
     switch (view) {
       case "scenario-launch":
         return (
-          <ScenarioLaunchView onSelectScenario={applyScenario} />
+          <ScenarioLaunchView onSelectScenario={applyScenario} onAdminControls={() => setView("admin")} />
         );
 
       case "landing":
@@ -308,7 +311,13 @@ export default function App() {
         return null;
 
       case "manual-search":
-        return <ManualSearchView onBack={() => setView("landing")} onPlans={() => openPlans("manual-search")} />;
+        return (
+          <ManualSearchView
+            onBack={() => setView("landing")}
+            onPlans={() => openPlans("manual-search")}
+            onSmartSearch={() => handleNavigate("landing")}
+          />
+        );
 
       case "saved-lists":
         return (
@@ -317,6 +326,7 @@ export default function App() {
             onStartAISearch={() => setView("landing")}
             justSavedListName={justSavedListName}
             onSaveComplete={() => setJustSavedListName(null)}
+            lastSmartPrompt={submittedPrompt}
           />
         );
 
@@ -363,10 +373,29 @@ export default function App() {
             planId={selectedPlan}
             billing={selectedBilling}
             onBack={() => setView("plans")}
-            onComplete={() => {
-              setToast({ message: `${selectedPlan.charAt(0).toUpperCase()}${selectedPlan.slice(1)} ${selectedBilling} subscription started.`, type: "success" });
-              setView("landing");
+            onComplete={({ billing, monthlyCredits }) => {
+              // Annual credits are provided upfront for 12 months plus the 1,000-credit annual bonus.
+              const credits = billing === "annual" ? monthlyCredits * 12 + 1000 : monthlyCredits;
+              setScenario("subscriber-free");
+              setFreeTotal(20);
+              setPromptsRemaining(20);
+              setCreditsRemaining(credits);
+              setFreePromptsJustExhausted(false);
+              setListPurchaseContext(null);
+              setToast({
+                message: `${selectedPlan.charAt(0).toUpperCase()}${selectedPlan.slice(1)} ${billing} subscription started · ${credits.toLocaleString()} credits added.`,
+                type: "success",
+              });
+              setView(plansReturnView === "results" && hasActiveSmartSearchConversation ? "results" : "landing");
             }}
+          />
+        );
+
+      case "admin":
+        return (
+          <AdminView
+            onBack={() => setView("scenario-launch")}
+            onToast={(message) => setToast({ message, type: "success" })}
           />
         );
 
@@ -397,10 +426,11 @@ export default function App() {
         isSubscriber={!isFree}
         onPlans={() => openPlans("landing")}
         hasActiveChat={hasActiveSmartSearchConversation}
+        adminMode={view === "admin"}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopHeader
+        {view !== "admin" && <TopHeader
           scenario={scenario}
           onScenarioChange={handleScenarioChange}
           promptsRemaining={promptsRemaining}
@@ -410,7 +440,9 @@ export default function App() {
           reservedCredits={reservedCredits}
           onLogout={handleLogout}
           onPlans={() => openPlans("landing")}
-        />
+          creditEducationOpen={creditEducationOpen}
+          onCreditEducationDone={() => setCreditEducationOpen(false)}
+        />}
         <div className="flex-1 overflow-hidden bg-white relative">
           {/* ResultsView stays mounted to preserve chat state across tab switches */}
           {hasActiveSmartSearchConversation && (
@@ -425,6 +457,7 @@ export default function App() {
                 showCreditCoach={false}
                 onDismissCreditCoach={() => setCreditCoachSeen(true)}
                 onBack={() => setView("landing")}
+                onManualSearch={() => setView("manual-search")}
                 onNewChat={handleNewChat}
                 onHistory={() => setHistoryOpen(true)}
                 onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}
@@ -496,11 +529,15 @@ export default function App() {
         <SaveListEducationTour onComplete={completeSavedListEducation} />
       )}
 
+      {creditEducationOpen && (
+        <CreditBalanceEducationTour onComplete={() => setCreditEducationOpen(false)} />
+      )}
+
       {milestoneModalOpen && (
         <CreditMilestoneModal
           freePromptsTotal={freeTotal}
-          onContinue={() => setMilestoneModalOpen(false)}
-          onViewBalance={() => setMilestoneModalOpen(false)}
+          onContinue={() => { setMilestoneModalOpen(false); setCreditEducationOpen(true); }}
+          onViewBalance={() => { setMilestoneModalOpen(false); setCreditEducationOpen(true); }}
         />
       )}
 

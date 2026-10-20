@@ -11,6 +11,8 @@ interface TopHeaderProps {
   reservedCredits: number;
   onLogout: () => void;
   onPlans: () => void;
+  creditEducationOpen?: boolean;
+  onCreditEducationDone?: () => void;
 }
 
 function LightningIcon({ className = "size-3", fill = "#008dc3" }: { className?: string; fill?: string }) {
@@ -58,6 +60,8 @@ export default function TopHeader({
   creditsRemaining,
   onLogout,
   onPlans,
+  creditEducationOpen = false,
+  onCreditEducationDone,
 }: TopHeaderProps) {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [pillOpen, setPillOpen] = useState(false);
@@ -66,6 +70,17 @@ export default function TopHeader({
 
   useClickOutside(pillRef, () => setPillOpen(false));
   useClickOutside(avatarRef, () => setAvatarOpen(false));
+
+  const prevCreditEdu = useRef(false);
+  useEffect(() => {
+    if (creditEducationOpen) {
+      setAvatarOpen(true);
+      setPillOpen(false);
+    } else if (prevCreditEdu.current) {
+      setAvatarOpen(false);
+    }
+    prevCreditEdu.current = creditEducationOpen;
+  }, [creditEducationOpen]);
 
   const isCredit = scenario === "subscriber-credit" || scenario === "subscriber-credit-0";
   const showPromptAllowance = promptsRemaining > 0;
@@ -181,7 +196,7 @@ export default function TopHeader({
             </div>
 
             {/* Subscription summary */}
-            <div className="flex flex-col gap-1 px-4 pt-[9px] pb-2 border-b border-[#eaecf0]">
+            <div data-coach="credit-balance" className="flex flex-col gap-1 px-4 pt-[9px] pb-2 border-b border-[#eaecf0]">
               <p className="text-[12px] font-normal leading-[18px] text-[#1d2939]">{accountLabel(scenario)}</p>
               {isCredit || (!isFreemium && promptsRemaining <= 0 && creditsRemaining > 0) ? (
                 <>
