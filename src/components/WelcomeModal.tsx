@@ -49,7 +49,7 @@ export default function WelcomeModal({ isSubscriber, onGetStarted }: WelcomeModa
               <SparkleIcon />
             </div>
             <h2 className="text-[22px] font-semibold leading-[30px] text-[#1d2939] mb-2">
-              Welcome to SalesGenie
+              Welcome to Salesgenie
             </h2>
             <p className="text-[14px] font-normal leading-[22px] text-[#475467] max-w-[380px]">
               Find your ideal leads faster with AI-powered Smart Search.

@@ -1617,7 +1617,7 @@ function Frame37() {
   return (
     <div className="content-stretch flex flex-col gap-[10px] items-start relative shrink-0 w-[1061px]">
       <Frame35 />
-      <p className="[word-break:break-word] font-['Inter:Regular',sans-serif] font-normal leading-[18px] not-italic relative shrink-0 text-[#1d2939] text-[12px] text-center w-full">SalesGenie AI my make mistakes. Review criteria before opening your list</p>
+      <p className="[word-break:break-word] font-['Inter:Regular',sans-serif] font-normal leading-[18px] not-italic relative shrink-0 text-[#1d2939] text-[12px] text-center w-full">Salesgenie AI my make mistakes. Review criteria before opening your list</p>
     </div>
   );
 }

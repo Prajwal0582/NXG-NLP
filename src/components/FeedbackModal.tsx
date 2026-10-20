@@ -41,7 +41,7 @@ export default function FeedbackModal({ onClose, onSubmit }: FeedbackModalProps)
               </svg>
             </div>
             <p className="text-sm font-medium text-[#1d2939]">Thank you for your feedback!</p>
-            <p className="text-sm text-[#475467] mt-1">{"We'll use this to improve SalesGenie AI."}</p>
+            <p className="text-sm text-[#475467] mt-1">{"We'll use this to improve Salesgenie AI."}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-8 p-10">

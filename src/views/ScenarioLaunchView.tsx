@@ -120,7 +120,7 @@ function SalesGenieLogo() {
             <path d="M10 2L3 7v6l7 5 7-5V7L10 2zm0 2.5L15.5 8v4L10 15.5 4.5 12V8L10 4.5z" />
           </svg>
         </div>
-        <span className="text-[15px] font-bold text-[#1d2939] tracking-tight">SalesGenie</span>
+        <span className="text-[15px] font-bold text-[#1d2939] tracking-tight">Salesgenie</span>
       </div>
       <span className="text-[#d0d5dd] text-lg font-light">|</span>
       <span className="text-[13px] text-[#667085] font-normal">by Data Axle</span>
@@ -146,7 +146,7 @@ export default function ScenarioLaunchView({ onSelectScenario, onAdminControls }
           {/* Page heading */}
           <div className="mb-10 text-center">
             <h1 className="text-2xl font-bold text-[#1d2939] mb-2">
-              SalesGenie Smart Search
+              Salesgenie Smart Search
             </h1>
             <p className="text-[#667085] text-sm">
               Choose a scenario to explore the prototype

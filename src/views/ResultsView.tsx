@@ -1379,7 +1379,7 @@ export default function ResultsView({
           </div>
 
           <p className="text-center text-xs text-[#98a2b3] mt-2">
-            SalesGenie AI may make mistakes. Review criteria before opening your list.
+            Salesgenie AI may make mistakes. Review criteria before opening your list.
           </p>
         </div>
       </div>

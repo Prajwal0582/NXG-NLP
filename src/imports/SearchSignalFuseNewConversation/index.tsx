@@ -511,7 +511,7 @@ function Container3() {
 function Paragraph() {
   return (
     <div className="content-stretch flex flex-col items-start relative shrink-0" data-name="Paragraph">
-      <p className="[word-break:break-word] font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#1d2939] text-[12px] whitespace-nowrap">SalesGenie AI may make mistakes. Review criteria before opening your list</p>
+      <p className="[word-break:break-word] font-['Inter:Regular',sans-serif] font-normal leading-[16px] not-italic relative shrink-0 text-[#1d2939] text-[12px] whitespace-nowrap">Salesgenie AI may make mistakes. Review criteria before opening your list</p>
     </div>
   );
 }
