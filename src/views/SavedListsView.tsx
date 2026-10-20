@@ -171,18 +171,6 @@ function AiSparkle({ className = "size-3" }: { className?: string }) {
   );
 }
 
-function AiBadge() {
-  return (
-    <span
-      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-[#e5f3fc] px-2 py-0.5 text-xs font-semibold leading-[18px] text-[#008dc3]"
-      title="Created by Smart Search"
-    >
-      <AiSparkle />
-      AI
-    </span>
-  );
-}
-
 function AiCriteriaCard({ prompt, filters, onRefine }: { prompt: string; filters: CriteriaFilter[]; onRefine: () => void }) {
   return (
     <section className="flex flex-col gap-4 rounded-lg border border-[#eaecf0] bg-white p-5">
@@ -300,7 +288,6 @@ function AudienceCard({ card, onClick }: { card: SavedListCard; onClick?: () => 
         <div className="flex flex-col gap-0.5">
           <div className="flex items-center gap-2">
             <h3 className="text-lg font-semibold text-[#1d2939] leading-7">{card.name}</h3>
-            {card.source === "smart" && <AiBadge />}
           </div>
           <p className="text-xs text-[#667085]">{card.date}</p>
         </div>
@@ -613,7 +600,6 @@ function SavedListDetail({ card, onBack, onRefine }: { card: SavedListCard; onBa
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
               <h2 className="text-[20px] font-medium leading-[30px] tracking-[0.2px] text-[#1d2939]">{card.name}</h2>
-              {card.source === "smart" && <AiBadge />}
             </div>
             <p className="text-[14px] leading-[21px] tracking-[0.14px] text-[#475467]">{card.date}</p>
           </div>
