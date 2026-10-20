@@ -111,8 +111,8 @@ export default function App() {
   useEffect(() => {
     document.title =
       view === "plans" || view === "subscription-checkout"
-        ? "SalesGenie — Pricing"
-        : "SalesGenie";
+        ? "Salesgenie — Pricing"
+        : "Salesgenie";
   }, [view]);
 
   function applyScenario(s: UserScenario, promptsOverride?: number) {
