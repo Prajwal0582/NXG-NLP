@@ -3,6 +3,9 @@ import type { BillingPeriod, GoalId, PlanId } from "../data/pricingPlans";
 import { GOAL_CHIPS } from "../data/pricingPlans";
 import type { ListPurchaseContext } from "../types";
 import { PackageFirstLayout } from "./pricing/PackageFirstLayout";
+import TalkToSalesModal from "./pricing/TalkToSalesModal";
+import type { PricingOption } from "./pricing/creditValue";
+import { PRICING_OPTIONS } from "./pricing/creditValue";
 
 interface PlansViewProps {
   onBack: () => void;
@@ -11,6 +14,40 @@ interface PlansViewProps {
   /** When set, Pricing opens in purchase-list mode (Buy List recommended). */
   purchaseContext?: ListPurchaseContext | null;
   onBuyListCheckout?: () => void;
+}
+
+function readOptionParam(): PricingOption {
+  const value = new URLSearchParams(window.location.search).get("option");
+  return PRICING_OPTIONS.some((o) => o.id === value) ? (value as PricingOption) : "current";
+}
+
+/** Prototype-only switcher for presenting pricing options side by side. */
+function OptionSwitcher({ option, onChange }: { option: PricingOption; onChange: (o: PricingOption) => void }) {
+  const active = PRICING_OPTIONS.find((o) => o.id === option)!;
+  return (
+    <div
+      data-option-switcher
+      className="fixed bottom-4 left-1/2 z-40 flex w-max max-w-[calc(100%-32px)] -translate-x-1/2 flex-col items-center gap-1.5 rounded-xl bg-[#1D2939] p-2 text-white shadow-lg"
+    >
+      <div className="flex max-w-full items-center gap-1 overflow-x-auto" role="group" aria-label="Pricing option">
+        <span className="shrink-0 px-2 text-[11px] font-semibold uppercase tracking-wide text-[#98A2B3]">Option</span>
+        {PRICING_OPTIONS.map((o) => (
+          <button
+            key={o.id}
+            type="button"
+            aria-pressed={o.id === option}
+            onClick={() => onChange(o.id)}
+            className={`h-8 shrink-0 whitespace-nowrap rounded-lg px-3 text-xs font-medium transition-colors ${
+              o.id === option ? "bg-white text-[#1D2939]" : "text-[#D0D5DD] hover:bg-white/10"
+            }`}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+      <p className="hidden px-2 text-center text-[11px] leading-4 text-[#98A2B3] sm:block">{active.description}</p>
+    </div>
+  );
 }
 
 const GOAL_TO_PLAN: Record<GoalId, PlanId> = {
@@ -34,6 +71,16 @@ export default function PlansView({
   const [billing, setBilling] = useState<BillingPeriod>("annual");
   const [goal, setGoal] = useState<GoalId | null>(contextDefaultGoal);
   const [selectedPlan, setSelectedPlan] = useState<PlanId>(contextDefaultPlan);
+  const [option, setOption] = useState<PricingOption>(readOptionParam);
+  const [salesOpen, setSalesOpen] = useState(false);
+
+  function changeOption(next: PricingOption) {
+    setOption(next);
+    const url = new URL(window.location.href);
+    if (next === "current") url.searchParams.delete("option");
+    else url.searchParams.set("option", next);
+    window.history.replaceState(window.history.state, "", url);
+  }
 
   // Re-init when entering/leaving purchase-list context (same component instance).
   useEffect(() => {
@@ -78,7 +125,15 @@ export default function PlansView({
     function onPointerDown(e: MouseEvent) {
       const el = e.target as HTMLElement | null;
       if (!el) return;
-      if (el.closest("[data-goal-chip]") || el.closest("[data-plan-card]") || el.closest("[data-pricing-header]")) return;
+      if (
+        el.closest("[data-goal-chip]") ||
+        el.closest("[data-plan-card]") ||
+        el.closest("[data-pricing-header]") ||
+        el.closest("[data-keep-selection]") ||
+        el.closest("[data-option-switcher]") ||
+        el.closest("[data-sales-modal]")
+      )
+        return;
       const isDefault = goal === contextDefaultGoal && selectedPlan === contextDefaultPlan;
       if (!isDefault) clearRecommendation();
     }
@@ -116,7 +171,13 @@ export default function PlansView({
         onSelectPlan={onSelectPlan}
         onBack={onBack}
         onBillingChange={setBilling}
+        option={option}
+        onTalkToSales={() => setSalesOpen(true)}
       />
+      {/* Room for the floating option switcher */}
+      <div aria-hidden className="h-24" />
+      {!salesOpen && <OptionSwitcher option={option} onChange={changeOption} />}
+      {salesOpen && <TalkToSalesModal onClose={() => setSalesOpen(false)} />}
     </div>
   );
 }

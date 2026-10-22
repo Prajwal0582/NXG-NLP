@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCartShopping, faCoins, faTag, faUsers } from "@fortawesome/free-solid-svg-icons";
+import { faCartShopping, faCoins, faPhone, faTag, faUsers } from "@fortawesome/free-solid-svg-icons";
 import { faCircleCheck, faEye } from "@fortawesome/free-regular-svg-icons";
 import type { FeatureItem, GoalId, PlanId } from "../../data/pricingPlans";
 import {
@@ -14,12 +14,17 @@ import {
 import type { PricingLayoutProps } from "./pricingTypes";
 import { CARD_SHADOW } from "./pricingTypes";
 import SubscriptionComparison from "./SubscriptionComparison";
+import type { PricingOption } from "./creditValue";
+import { PAYG_CREDIT_RATE, creditValue, fmtMoney, fmtNumber, fmtRate } from "./creditValue";
 
 export interface PackageFirstLayoutProps extends PricingLayoutProps {
   goal: GoalId | null;
   onSelectGoal: (id: GoalId) => void;
   onBack: () => void;
   onBillingChange: (billing: PricingLayoutProps["billing"]) => void;
+  /** Prototype option being reviewed — "current" renders the shipped layout. */
+  option: PricingOption;
+  onTalkToSales: () => void;
 }
 
 /** Shared light gray header surface — same shade on every package card. */
@@ -319,6 +324,166 @@ function PlanFacts({
   );
 }
 
+/** Inline "Talk to sales" trigger inside a plan card — never selects the card. */
+function TalkToSalesLink({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick();
+      }}
+      onKeyDown={(e) => e.stopPropagation()}
+      className="inline-flex items-center gap-1.5 font-semibold text-[#008DC3] hover:text-[#00729F] hover:underline"
+    >
+      {label}
+    </button>
+  );
+}
+
+/** Option B — credit value strip under the price. */
+function CreditValueStrip({
+  tone,
+  title,
+  chip,
+  body,
+}: {
+  tone: "value" | "neutral";
+  title: string;
+  chip: string;
+  body: string;
+}) {
+  return (
+    <div
+      className={`mt-4 rounded-lg border px-3 py-2.5 ${
+        tone === "value" ? "border-[#CDE9E0] bg-[#F2F9F7]" : "border-[#EAECF0] bg-[#F9FAFB]"
+      }`}
+    >
+      <div className="flex flex-col items-start gap-1">
+        <p className={`text-sm font-semibold leading-5 ${tone === "value" ? "text-[#026B5C]" : "text-[#344054]"}`}>
+          {title}
+        </p>
+        <span
+          className={`inline-flex h-5 items-center rounded border bg-white px-1.5 text-xs font-semibold leading-[18px] whitespace-nowrap ${
+            tone === "value" ? "border-[#CDE9E0] text-[#026B5C]" : "border-[#EAECF0] text-[#475467]"
+          }`}
+        >
+          {chip}
+        </span>
+      </div>
+      <p className={`mt-0.5 text-xs leading-[18px] ${tone === "value" ? "text-[#026B5C]" : "text-[#475467]"}`}>
+        {body}
+      </p>
+    </div>
+  );
+}
+
+/** Option C — what the Pro price difference buys on Basic vs what Pro includes. */
+function CreditMathPanel({
+  billing,
+  onChoosePro,
+}: {
+  billing: PricingLayoutProps["billing"];
+  onChoosePro: () => void;
+}) {
+  const v = creditValue(billing);
+  const rows = [
+    {
+      label: `Basic + ${fmtMoney(v.difference)} in pay-as-you-go credits`,
+      credits: v.paygCredits,
+      value: `~${fmtNumber(v.paygCredits)} credits`,
+      bar: "bg-[#98A2B3]",
+      text: "text-[#475467]",
+    },
+    {
+      label: "Pro — credits included",
+      credits: v.included,
+      value: `${fmtNumber(v.included)} credits`,
+      bar: "bg-[#008DC3]",
+      text: "text-[#1D2939]",
+    },
+  ];
+  return (
+    <div
+      data-keep-selection
+      className="flex flex-col gap-4 rounded-xl border border-[#D0D5DD] bg-white p-5 xl:col-span-2"
+      style={{ boxShadow: CARD_SHADOW }}
+    >
+      <div>
+        <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">Basic vs Pro · credit math</p>
+        <p className="mt-1 text-lg font-semibold leading-7 text-[#1D2939]">
+          Spend {fmtMoney(v.proPrice)}/{v.period} either way — Pro gets you{" "}
+          <span className="text-[#008DC3]">{v.extraPct}% more credits</span>
+        </p>
+      </div>
+      <div className="flex flex-col gap-3">
+        {rows.map((row) => (
+          <div key={row.label}>
+            <div className="flex items-baseline justify-between gap-3 text-sm leading-5">
+              <span className={`font-medium ${row.text}`}>{row.label}</span>
+              <span className={`shrink-0 font-semibold ${row.text}`}>{row.value}</span>
+            </div>
+            <div className="mt-1.5 h-2.5 w-full rounded-full bg-[#F2F4F7]">
+              <div
+                className={`h-full rounded-full ${row.bar}`}
+                style={{ width: `${(row.credits / v.included) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-[18px] text-[#475467]">
+          Pay-as-you-go credits cost {fmtRate(PAYG_CREDIT_RATE)} each. Pro&apos;s included credits work out to about{" "}
+          {fmtRate(v.effectiveRate)} each.
+        </p>
+        <button
+          type="button"
+          onClick={onChoosePro}
+          className="h-10 shrink-0 rounded-lg border border-[#008DC3] bg-[#008DC3] px-4 text-sm font-medium text-white hover:bg-[#00729F]"
+        >
+          Choose Pro →
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Option C — seats banner routed to sales. */
+function SeatsBanner({ onTalkToSales }: { onTalkToSales: () => void }) {
+  return (
+    <div
+      data-keep-selection
+      className="flex flex-col justify-between gap-4 rounded-xl border border-[#D0D5DD] bg-white p-5 xl:col-span-2"
+      style={{ boxShadow: CARD_SHADOW }}
+    >
+      <div className="flex items-start gap-3">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#F0F9FF] text-[#008DC3]">
+          <FontAwesomeIcon icon={faUsers} className="text-[16px]" aria-hidden />
+        </span>
+        <div>
+          <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">Team · more seats</p>
+          <p className="mt-1 text-lg font-semibold leading-7 text-[#1D2939]">Need more than 5 seats?</p>
+          <p className="mt-1 text-sm leading-5 text-[#475467]">
+            Team includes 5 users. Our sales team can add seats and volume pricing for larger teams.
+          </p>
+        </div>
+      </div>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-xs leading-[18px] text-[#667085]">One click — we&apos;ll call you within 1 business day.</p>
+        <button
+          type="button"
+          onClick={onTalkToSales}
+          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#008DC3] bg-white px-4 text-sm font-medium text-[#008DC3] hover:bg-[#F0F9FF]"
+        >
+          <FontAwesomeIcon icon={faPhone} className="text-[14px]" aria-hidden />
+          Talk to sales
+        </button>
+      </div>
+    </div>
+  );
+}
+
 /**
  * Direction 2 — Package First:
  * Header panel (context + billing + annual offer) → Best Fit → four package cards.
@@ -339,7 +504,11 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
     onSelectPlan,
     onBack,
     onBillingChange,
+    option,
+    onTalkToSales,
   } = props;
+
+  const value = creditValue(billing);
 
   const buyPlan = BUY_LIST_PLAN;
   const buySelected = selectedPlan === "buy-list";
@@ -476,6 +645,13 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
           </div>
         </div>
 
+        {option === "c" && (
+          <div className="pt-3 grid grid-cols-1 xl:grid-cols-4 gap-4 xl:gap-5">
+            <CreditMathPanel billing={billing} onChoosePro={() => onCta("pro")} />
+            <SeatsBanner onTalkToSales={onTalkToSales} />
+          </div>
+        )}
+
         {/*
           Cards: 1-col phone → 2×2 tablet → 4-col desktop.
           Subgrid alignment only at xl so stacked rows stay compact on smaller screens.
@@ -563,6 +739,26 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                         pricing.supportLines.map((line) => <p key={line}>{line}</p>)
                       )}
                     </div>
+                    {option === "b" && planId === "basic" && (
+                      <CreditValueStrip
+                        tone="neutral"
+                        title="Pay-as-you-go credits"
+                        chip={`${fmtRate(PAYG_CREDIT_RATE)}/credit`}
+                        body="No credits included. Buy them only when you need them."
+                      />
+                    )}
+                    {option === "b" && planId !== "basic" && (
+                      <CreditValueStrip
+                        tone="value"
+                        title={`${fmtNumber(value.included)} credits included`}
+                        chip={`≈ ${fmtMoney(value.includedValue)} value`}
+                        body={
+                          planId === "pro"
+                            ? `The extra ${fmtMoney(value.difference)} over Basic works out to ~${fmtRate(value.effectiveRate)}/credit — ${value.savingsPct}% less than pay-as-you-go (${fmtRate(PAYG_CREDIT_RATE)}).`
+                            : `Shared by your 5 users. Bought pay-as-you-go, they'd cost ${fmtMoney(value.includedValue)}.`
+                        }
+                      />
+                    )}
                   </div>
                 </div>
 
@@ -592,16 +788,43 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                       { label: "Access", value: summary.access },
                       {
                         label: "Credits",
-                        value: summary.creditsLabel(billing),
+                        value:
+                          option === "a" && planId !== "basic" ? (
+                            <>
+                              {summary.creditsLabel(billing)}{" "}
+                              <span className="font-semibold text-[#0D7867]">
+                                (≈ {fmtMoney(value.includedValue)} value)
+                              </span>
+                            </>
+                          ) : option === "b" && planId === "basic" ? (
+                            `Pay as you go · ${fmtRate(PAYG_CREDIT_RATE)}/credit`
+                          ) : (
+                            summary.creditsLabel(billing)
+                          ),
                         emphasize: planId === "pro" || planId === "team",
                       },
                       {
                         label: "Users",
-                        value: summary.users,
+                        value:
+                          option === "b" && planId === "team" ? (
+                            <>
+                              {summary.users} ·{" "}
+                              <TalkToSalesLink label="Need more? Talk to sales" onClick={onTalkToSales} />
+                            </>
+                          ) : (
+                            summary.users
+                          ),
                         emphasize: planId === "team",
                       },
                     ]}
                   />
+                  {option === "a" && planId === "team" && (
+                    <p className="mt-2 flex items-center gap-1.5 px-1 text-xs leading-[18px] text-[#475467]">
+                      <FontAwesomeIcon icon={faPhone} className="text-[11px] text-[#008DC3]" aria-hidden />
+                      Need more than 5 seats?{" "}
+                      <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
+                    </p>
+                  )}
                 </div>
 
                 {/* Row 5 — feature checklists; addons bottom-aligned across cards */}
@@ -718,6 +941,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             </div>
           </div>
         </div>
+
       </div>
 
       <SubscriptionComparison billing={billing} onSelectPlan={onSelectPlan} />
