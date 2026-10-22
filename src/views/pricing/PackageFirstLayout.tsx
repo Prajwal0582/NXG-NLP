@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { Fragment, useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
@@ -6,6 +6,7 @@ import {
   faCircleInfo,
   faCoins,
   faTag,
+  faUser,
   faUserPlus,
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
@@ -24,7 +25,7 @@ import type { PricingLayoutProps } from "./pricingTypes";
 import { CARD_SHADOW } from "./pricingTypes";
 import SubscriptionComparison from "./SubscriptionComparison";
 import type { PricingOption } from "./creditValue";
-import { PAYG_CREDIT_RATE, creditValue, hidesGoalPicker, isValueLed, fmtMoney, fmtNumber, fmtRate } from "./creditValue";
+import { PAYG_CREDIT_RATE, creditValue, groupsPlans, hidesGoalPicker, isValueLed, fmtMoney, fmtNumber, fmtRate } from "./creditValue";
 
 export interface PackageFirstLayoutProps extends PricingLayoutProps {
   goal: GoalId | null;
@@ -494,6 +495,71 @@ function SeatsFactsFooter({ onTalkToSales }: { onTalkToSales: () => void }) {
   );
 }
 
+/**
+ * Option B3 — plan groups. At xl the grid gains a label row and spacer tracks
+ * (cols 3 and 5) so each group can sit on its own panel; rows stay subgrid-aligned.
+ */
+const GROUPED_GRID_COLS =
+  "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_12px_minmax(0,1fr)_12px_minmax(0,1fr)]";
+
+const GROUPED_CARD_PLACEMENT: Record<PlanId, string> = {
+  basic: "xl:[grid-column:1] xl:[grid-row:2/span_4]",
+  pro: "xl:[grid-column:2] xl:[grid-row:2/span_4]",
+  team: "xl:[grid-column:4] xl:[grid-row:2/span_4]",
+  "buy-list": "xl:[grid-column:6] xl:[grid-row:2/span_4]",
+};
+
+const PLAN_GROUPS = [
+  {
+    id: "individual",
+    label: "Individual plans · 1 user",
+    icon: faUser,
+    first: "basic",
+    column: "xl:[grid-column:1/span_2]",
+    panel: "bg-[#E6F4FB] border-[#B9E6FE]",
+    text: "text-[#00729F]",
+  },
+  {
+    id: "team",
+    label: "Team plan · 5 users",
+    icon: faUsers,
+    first: "team",
+    column: "xl:[grid-column:4/span_1]",
+    panel: "bg-[#E4E7EC] border-[#D0D5DD]",
+    text: "text-[#475467]",
+  },
+  {
+    id: "one-time",
+    label: "One-time purchase",
+    icon: faCartShopping,
+    first: "buy-list",
+    column: "xl:[grid-column:6/span_1]",
+    panel: "bg-[#E4E7EC] border-[#D0D5DD]",
+    text: "text-[#475467]",
+  },
+] as const;
+
+/** Decorative panel behind a group of cards (desktop only — stacked layouts use the label alone). */
+function GroupPanel({ group }: { group: (typeof PLAN_GROUPS)[number] }) {
+  return (
+    <div
+      aria-hidden
+      className={`hidden xl:block -m-3 rounded-2xl border ${group.panel} ${group.column} xl:[grid-row:1/span_5]`}
+    />
+  );
+}
+
+function GroupLabel({ group }: { group: (typeof PLAN_GROUPS)[number] }) {
+  return (
+    <p
+      className={`relative col-span-full flex items-center gap-2 text-sm font-semibold leading-5 ${group.text} ${group.column} xl:[grid-row:1]`}
+    >
+      <FontAwesomeIcon icon={group.icon} className="text-[13px]" aria-hidden />
+      {group.label}
+    </p>
+  );
+}
+
 /** Option B3 — headline + indented pointers (credits/value summary under the price). */
 function CreditSummary({
   icon,
@@ -629,6 +695,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
   } = props;
 
   const value = creditValue(billing);
+  const grouped = groupsPlans(option);
 
   const buyPlan = BUY_LIST_PLAN;
   const buySelected = selectedPlan === "buy-list";
@@ -772,10 +839,13 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
           Subgrid alignment only at xl so stacked rows stay compact on smaller screens.
         */}
         <div
-          className={`${hidesGoalPicker(option) ? "pt-8" : "pt-3"} grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-5 items-stretch`}
+          className={`${hidesGoalPicker(option) ? "pt-8" : "pt-3"} grid grid-cols-1 md:grid-cols-2 ${
+            grouped ? GROUPED_GRID_COLS : "xl:grid-cols-4"
+          } gap-4 xl:gap-5 items-stretch`}
           role="radiogroup"
           aria-label="Choose a plan"
         >
+          {grouped && PLAN_GROUPS.map((group) => <GroupPanel key={group.id} group={group} />)}
           {SUBSCRIPTION_PLANS.map((plan) => {
             const planId = plan.id as Exclude<PlanId, "buy-list">;
             const pricing = billing === "monthly" ? plan.monthly : plan.annual;
@@ -784,9 +854,12 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             const summary = PACKAGE_SUMMARIES[planId];
             const fullPlan = PLANS.find((p) => p.id === plan.id)!;
 
+            const group = grouped ? PLAN_GROUPS.find((g) => g.first === plan.id) : undefined;
+
             return (
+              <Fragment key={plan.id}>
+              {group && <GroupLabel group={group} />}
               <div
-                key={plan.id}
                 data-plan-card
                 role="radio"
                 aria-checked={isSelected}
@@ -798,7 +871,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     onSelectCard(plan.id);
                   }
                 }}
-                className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-4 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
+                className={`relative box-border h-full flex flex-col min-w-0 ${
+                  grouped ? GROUPED_CARD_PLACEMENT[plan.id] : "xl:row-span-4"
+                } xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
                   isSelected
                     ? "border-[#B9D9EC]"
                     : "border-[#D0D5DD] hover:border-[#98A2B3]"
@@ -939,8 +1014,11 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
                 </div>
               </div>
+              </Fragment>
             );
           })}
+
+          {grouped && <GroupLabel group={PLAN_GROUPS[2]} />}
 
           {/* Buy List — same 5-row subgrid structure */}
           <div
@@ -955,7 +1033,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 onSelectCard("buy-list");
               }
             }}
-            className={`relative box-border h-full flex flex-col min-w-0 xl:row-span-4 xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
+            className={`relative box-border h-full flex flex-col min-w-0 ${
+              grouped ? GROUPED_CARD_PLACEMENT["buy-list"] + " border-dashed" : "xl:row-span-4"
+            } xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible transition-[border-color] ${
               buySelected
                 ? "border-[#B9D9EC]"
                 : "border-[#D0D5DD] hover:border-[#98A2B3]"

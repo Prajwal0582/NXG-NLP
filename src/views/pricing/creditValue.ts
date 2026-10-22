@@ -14,6 +14,9 @@ export const PRICING_OPTIONS: { id: PricingOption; label: string; description: s
 /** Option B's value-led cards (chip, you pay / you get, seats alert). */
 export const isValueLed = (o: PricingOption) => o === "b";
 
+/** Options that group cards into Individual / Team / One-time panels. */
+export const groupsPlans = (o: PricingOption) => o === "b3";
+
 /** Options without the "Tell us your goal" picker (no auto-recommended plan). */
 export const hidesGoalPicker = (o: PricingOption) => o === "b3";
 
