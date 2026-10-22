@@ -1,6 +1,14 @@
 import { useState, type ReactNode } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faCartShopping, faCoins, faPhone, faTag, faUsers } from "@fortawesome/free-solid-svg-icons";
+import {
+  faArrowRight,
+  faCartShopping,
+  faCoins,
+  faPhone,
+  faTag,
+  faUserPlus,
+  faUsers,
+} from "@fortawesome/free-solid-svg-icons";
 import { faCircleCheck, faEye } from "@fortawesome/free-regular-svg-icons";
 import type { FeatureItem, GoalId, PlanId } from "../../data/pricingPlans";
 import {
@@ -341,39 +349,82 @@ function TalkToSalesLink({ label, onClick }: { label: string; onClick: () => voi
   );
 }
 
-/** Option B — credit value strip under the price. */
-function CreditValueStrip({
-  tone,
-  title,
-  chip,
-  body,
-}: {
-  tone: "value" | "neutral";
-  title: string;
-  chip: string;
-  body: string;
-}) {
+/** Option B — credit value chip under the price (same weight as the Save 17% chip). */
+function CreditChip({ children }: { children: ReactNode }) {
   return (
-    <div
-      className={`mt-4 rounded-lg border px-3 py-2.5 ${
-        tone === "value" ? "border-[#CDE9E0] bg-[#F2F9F7]" : "border-[#EAECF0] bg-[#F9FAFB]"
-      }`}
-    >
-      <div className="flex flex-col items-start gap-1">
-        <p className={`text-sm font-semibold leading-5 ${tone === "value" ? "text-[#026B5C]" : "text-[#344054]"}`}>
-          {title}
+    <span className="mt-2 inline-flex min-h-7 w-fit items-center gap-1.5 rounded bg-[#F2F9F7] px-2 py-1 text-sm font-medium leading-5 text-[#026B5C]">
+      <FontAwesomeIcon icon={faCoins} className="text-[12px]" aria-hidden />
+      <span>{children}</span>
+    </span>
+  );
+}
+
+/** Option B (Pro) — "pay $500 more, get $900 of credits" equation. */
+function CreditEquation({ billing }: { billing: PricingLayoutProps["billing"] }) {
+  const v = creditValue(billing);
+  const per = billing === "annual" ? "" : "/mo";
+  return (
+    <div className="mt-4 flex items-center gap-3 rounded-lg border border-[#CDE9E0] bg-[#F2F9F7] px-3 py-2.5">
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">You pay</p>
+        <p className="text-xl font-semibold leading-[30px] text-[#1D2939]">
+          +{fmtMoney(v.difference)}
+          <span className="text-sm font-medium">{per}</span>
         </p>
-        <span
-          className={`inline-flex h-5 items-center rounded border bg-white px-1.5 text-xs font-semibold leading-[18px] whitespace-nowrap ${
-            tone === "value" ? "border-[#CDE9E0] text-[#026B5C]" : "border-[#EAECF0] text-[#475467]"
-          }`}
-        >
-          {chip}
-        </span>
+        <p className="text-xs leading-[18px] text-[#475467]">more than Basic</p>
       </div>
-      <p className={`mt-0.5 text-xs leading-[18px] ${tone === "value" ? "text-[#026B5C]" : "text-[#475467]"}`}>
-        {body}
+      <span className="shrink-0 text-[#026B5C]" aria-hidden>
+        <FontAwesomeIcon icon={faArrowRight} className="text-[14px]" />
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">You get</p>
+        <p className="text-xl font-semibold leading-[30px] text-[#026B5C]">
+          {fmtMoney(v.includedValue)}
+          <span className="text-sm font-medium">{per}</span>
+        </p>
+        <p className="text-xs leading-[18px] text-[#475467]">in credits ({fmtNumber(v.included)})</p>
+      </div>
+    </div>
+  );
+}
+
+/** Option B (Basic) — what the same credits cost pay-as-you-go. */
+function PaygCreditNote({ billing }: { billing: PricingLayoutProps["billing"] }) {
+  const v = creditValue(billing);
+  const per = billing === "annual" ? "" : "/mo";
+  return (
+    <div className="mt-4 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-2.5">
+      <div className="flex items-start justify-between gap-3">
+        <p className="text-sm font-semibold leading-5 text-[#344054]">
+          Need {fmtNumber(v.included)} credits{billing === "annual" ? "" : " a month"}?
+        </p>
+        <p className="shrink-0 text-sm font-semibold leading-5 text-[#1D2939]">
+          +{fmtMoney(v.includedValue)}
+          {per}
+        </p>
+      </div>
+      <p className="mt-0.5 text-xs leading-[18px] text-[#475467]">
+        Pay as you go at {fmtRate(PAYG_CREDIT_RATE)}/credit. Pro includes them for {fmtMoney(v.difference)}
+        {per} more.
       </p>
+    </div>
+  );
+}
+
+/** Option B (Team) — inline alert routing extra seats to sales. */
+function SeatsInlineAlert({ onTalkToSales }: { onTalkToSales: () => void }) {
+  return (
+    <div role="note" className="mt-4 flex items-start gap-2.5 rounded-lg border border-[#B9E6FE] bg-[#F0F9FF] px-3 py-2.5">
+      <span className="shrink-0 pt-0.5 text-[#008DC3]" aria-hidden>
+        <FontAwesomeIcon icon={faUserPlus} className="text-[14px]" />
+      </span>
+      <div className="min-w-0 text-xs leading-[18px]">
+        <p className="text-sm font-semibold leading-5 text-[#1D2939]">Need more than 5 seats?</p>
+        <p className="text-[#475467]">We&apos;ll set up custom seats for your team.</p>
+        <p className="mt-1">
+          <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
+        </p>
+      </div>
     </div>
   );
 }
@@ -721,6 +772,12 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                         <span className="text-base leading-6 mt-3.5 font-semibold">{pricing.suffix}</span>
                       </p>
                     </div>
+                    {option === "b" && planId !== "basic" && (
+                      <CreditChip>
+                        Includes {fmtNumber(value.included)} credits · worth{" "}
+                        {fmtMoney(value.includedValue)}
+                      </CreditChip>
+                    )}
                     <div
                       className={`mt-4 text-sm leading-5 ${
                         billing === "annual" ? "text-[#0D7867]" : "text-[#475467]"
@@ -739,26 +796,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                         pricing.supportLines.map((line) => <p key={line}>{line}</p>)
                       )}
                     </div>
-                    {option === "b" && planId === "basic" && (
-                      <CreditValueStrip
-                        tone="neutral"
-                        title="Pay-as-you-go credits"
-                        chip={`${fmtRate(PAYG_CREDIT_RATE)}/credit`}
-                        body="No credits included. Buy them only when you need them."
-                      />
-                    )}
-                    {option === "b" && planId !== "basic" && (
-                      <CreditValueStrip
-                        tone="value"
-                        title={`${fmtNumber(value.included)} credits included`}
-                        chip={`≈ ${fmtMoney(value.includedValue)} value`}
-                        body={
-                          planId === "pro"
-                            ? `The extra ${fmtMoney(value.difference)} over Basic works out to ~${fmtRate(value.effectiveRate)}/credit — ${value.savingsPct}% less than pay-as-you-go (${fmtRate(PAYG_CREDIT_RATE)}).`
-                            : `Shared by your 5 users. Bought pay-as-you-go, they'd cost ${fmtMoney(value.includedValue)}.`
-                        }
-                      />
-                    )}
+                    {option === "b" && planId === "basic" && <PaygCreditNote billing={billing} />}
+                    {option === "b" && planId === "pro" && <CreditEquation billing={billing} />}
+                    {option === "b" && planId === "team" && <SeatsInlineAlert onTalkToSales={onTalkToSales} />}
                   </div>
                 </div>
 
@@ -806,14 +846,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                       {
                         label: "Users",
                         value:
-                          option === "b" && planId === "team" ? (
-                            <>
-                              {summary.users} ·{" "}
-                              <TalkToSalesLink label="Need more? Talk to sales" onClick={onTalkToSales} />
-                            </>
-                          ) : (
-                            summary.users
-                          ),
+                          summary.users,
                         emphasize: planId === "team",
                       },
                     ]}

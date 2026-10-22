@@ -7,7 +7,7 @@ export type PricingOption = "current" | "a" | "b" | "c";
 export const PRICING_OPTIONS: { id: PricingOption; label: string; description: string }[] = [
   { id: "current", label: "Current", description: "Shipped layout, unchanged." },
   { id: "a", label: "A · Light touch", description: "Credit value in the facts box, Talk to sales link on Team." },
-  { id: "b", label: "B · Value-led", description: "Credit value strip under each price, sales link in Team's users fact." },
+  { id: "b", label: "B · Value-led", description: "Credit value chip, 'pay more, get more credits' box on Pro, seats alert on Team." },
   { id: "c", label: "C · Guided comparison", description: "Basic vs Pro credit math and a seats banner above the cards." },
 ];
 
