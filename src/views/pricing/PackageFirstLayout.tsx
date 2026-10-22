@@ -632,15 +632,11 @@ function PlanPriceV3({
             points: [
               { mark: "=", content: annual ? "Provided upfront for the year" : "Added every month" },
               {
-                mark: "~",
-                content: `Worth ${worth}, for only ${fmtMoney(v.difference)}${annual ? "" : "/mo"} more than Basic`,
-              },
-              {
                 mark: "+",
                 content: (
                   <span className="font-semibold text-[#0D7867]">
-                    You save {fmtMoney(v.includedValue - v.difference)}
-                    {annual ? "" : "/mo"}
+                    Save {fmtMoney(v.includedValue - v.difference)}
+                    {annual ? "" : "/mo"} vs. buying them on Basic
                   </span>
                 ),
               },
