@@ -622,7 +622,7 @@ function PlanPriceV3({
           title: "No credits included",
           points: [
             { mark: "+", content: `Buy credits as you go, at ${fmtRate(PAYG_CREDIT_RATE)} each` },
-            { mark: "~", content: "Needed to export leads or unlock emails" },
+            { mark: "=", content: "Credits power Genie features like exports, email unlocks and campaigns" },
           ],
         }
       : planId === "pro"
