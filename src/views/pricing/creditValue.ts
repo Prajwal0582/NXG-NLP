@@ -8,11 +8,11 @@ export const PRICING_OPTIONS: { id: PricingOption; label: string; description: s
   { id: "current", label: "Current", description: "Shipped layout, unchanged." },
   { id: "b", label: "B · Value-led", description: "Credit chip under the price, 'you pay / you get' box on Pro, seats alert on Team." },
   { id: "b2", label: "B2 · Value band", description: "Credit band on every card, Basic vs Pro cost to get the credits, seats ask in Team's facts." },
-  { id: "b3", label: "B3 · Value-led v2", description: "B without the goal picker; iterating from here." },
+  { id: "b3", label: "B3 · Value-led v2", description: "No goal picker, compact price with strike-through, credit summary under the price." },
 ];
 
-/** Options built on B's value-led cards. */
-export const isValueLed = (o: PricingOption) => o === "b" || o === "b3";
+/** Option B's value-led cards (chip, you pay / you get, seats alert). */
+export const isValueLed = (o: PricingOption) => o === "b";
 
 /** Options without the "Tell us your goal" picker (no auto-recommended plan). */
 export const hidesGoalPicker = (o: PricingOption) => o === "b3";

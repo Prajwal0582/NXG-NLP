@@ -10,6 +10,7 @@ import {
   faUsers,
 } from "@fortawesome/free-solid-svg-icons";
 import { faCircleCheck, faEye } from "@fortawesome/free-regular-svg-icons";
+import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
 import type { FeatureItem, GoalId, PlanId } from "../../data/pricingPlans";
 import {
   BUY_LIST_PLAN,
@@ -493,6 +494,116 @@ function SeatsFactsFooter({ onTalkToSales }: { onTalkToSales: () => void }) {
   );
 }
 
+/** Option B3 — headline + indented pointers (credits/value summary under the price). */
+function CreditSummary({
+  icon,
+  title,
+  points,
+}: {
+  icon: IconDefinition;
+  title: string;
+  points: { mark: string; content: ReactNode }[];
+}) {
+  return (
+    <div className="mt-4 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-3">
+      <p className="flex items-center gap-2 text-base font-semibold leading-6 text-[#1D2939]">
+        <span className="flex size-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+          <FontAwesomeIcon icon={icon} className="text-[15px]" />
+        </span>
+        {title}
+      </p>
+      <ul className="mt-1 flex flex-col gap-0.5 pl-7">
+        {points.map((point, i) => (
+          <li key={i} className="flex gap-1.5 text-sm leading-5 text-[#667085]">
+            <span className="w-3 shrink-0 text-center" aria-hidden>
+              {point.mark}
+            </span>
+            <span className="min-w-0">{point.content}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Option B3 — "$990/yr ~~$1,188~~", one-sentence billing note, credit summary. */
+function PlanPriceV3({
+  planId,
+  pricing,
+  billing,
+  onTalkToSales,
+}: {
+  planId: Exclude<PlanId, "buy-list">;
+  pricing: { display: string; strikePrice?: string };
+  billing: PricingLayoutProps["billing"];
+  onTalkToSales: () => void;
+}) {
+  const v = creditValue(billing);
+  const annual = billing === "annual";
+  const per = annual ? "/yr" : "/mo";
+  const billingNote = annual
+    ? "Billed annually, at only 10 months’ cost when paid upfront."
+    : planId === "team"
+      ? "5 seats, billed monthly on an annual contract."
+      : "Per seat, billed monthly on an annual contract.";
+  const credits = `${fmtNumber(v.included)} credits${annual ? "" : "/mo"}`;
+  const worth = `${fmtMoney(v.includedValue)}${annual ? "" : "/mo"}`;
+
+  const summary =
+    planId === "basic"
+      ? {
+          icon: faCoins,
+          title: "No credits included",
+          points: [
+            { mark: "+", content: `Credits at ${fmtRate(PAYG_CREDIT_RATE)} each, as you go` },
+            { mark: "~", content: `${credits} would cost ${worth}` },
+          ],
+        }
+      : planId === "pro"
+        ? {
+            icon: faCoins,
+            title: `Basic + ${credits}`,
+            points: [
+              { mark: "=", content: annual ? "Provided upfront for the year" : "Added every month" },
+              { mark: "~", content: `Worth ${worth} at ${fmtRate(PAYG_CREDIT_RATE)} each` },
+            ],
+          }
+        : {
+            icon: faUsers,
+            title: "Pro + 5 users",
+            points: [
+              { mark: "=", content: `${credits} shared, worth ${worth}` },
+              {
+                mark: "+",
+                content: (
+                  <>
+                    Need more seats? <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
+                  </>
+                ),
+              },
+            ],
+          };
+
+  return (
+    <div className="flex flex-col">
+      <div className="flex flex-wrap items-end gap-x-2 font-semibold text-[#1D2939]">
+        <p className="inline-flex items-start tracking-[-0.72px]">
+          <span className="text-xl leading-[30px] mt-1">$</span>
+          <span className="text-[36px] leading-[44px]">{pricing.display}</span>
+          <span className="text-base leading-6 mt-3.5">{per}</span>
+        </p>
+        {annual && pricing.strikePrice && (
+          <span className="mb-1.5 text-lg font-medium leading-7 text-[#98A2B3] line-through">
+            ${pricing.strikePrice}
+          </span>
+        )}
+      </div>
+      <p className="mt-2 text-sm leading-5 text-[#475467]">{billingNote}</p>
+      <CreditSummary {...summary} />
+    </div>
+  );
+}
+
 /**
  * Direction 2 — Package First:
  * Header panel (context + billing + annual offer) → Best Fit → four package cards.
@@ -708,7 +819,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                       {plan.category}
                     </p>
                     <h3 className="text-2xl font-semibold leading-8 text-[#008DC3]">{plan.name}</h3>
-                    <p className="text-sm font-normal leading-5 text-[#475467]">{plan.description}</p>
+                    {option !== "b3" && (
+                      <p className="text-sm font-normal leading-5 text-[#475467]">{plan.description}</p>
+                    )}
                   </div>
                 </div>
 
@@ -724,6 +837,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                         {fmtNumber(value.included)} credits included · worth {fmtMoney(value.includedValue)}
                       </CreditBand>
                     ))}
+                  {option === "b3" ? (
+                    <PlanPriceV3 planId={planId} pricing={pricing} billing={billing} onTalkToSales={onTalkToSales} />
+                  ) : (
                   <div className="flex flex-col">
                     <div className="flex items-start gap-1.5">
                       <span className="text-sm font-normal leading-5 text-[#475467] pt-1.5 shrink-0">
@@ -764,6 +880,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     {isValueLed(option) && planId === "team" && <SeatsInlineAlert onTalkToSales={onTalkToSales} />}
                     {option === "b2" && planId === "pro" && <CreditCostCompare billing={billing} />}
                   </div>
+                  )}
                 </div>
 
                 {/* Row 3 — CTA */}
@@ -856,7 +973,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                   {buyPlan.category}
                 </p>
                 <h3 className="text-2xl font-semibold leading-8 text-[#008DC3]">{buyPlan.name}</h3>
-                <p className="text-sm font-normal leading-5 text-[#475467]">{buyPlan.description}</p>
+                {option !== "b3" && (
+                  <p className="text-sm font-normal leading-5 text-[#475467]">{buyPlan.description}</p>
+                )}
               </div>
             </div>
 
@@ -878,6 +997,16 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     <p key={line}>{line}</p>
                   ))}
                 </div>
+                {option === "b3" && (
+                  <CreditSummary
+                    icon={faCartShopping}
+                    title="One-time purchase"
+                    points={[
+                      { mark: "=", content: "No subscription needed" },
+                      { mark: "+", content: "12 months re-export access" },
+                    ]}
+                  />
+                )}
               </div>
             </div>
 
