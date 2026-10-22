@@ -23,7 +23,7 @@ import type { PricingLayoutProps } from "./pricingTypes";
 import { CARD_SHADOW } from "./pricingTypes";
 import SubscriptionComparison from "./SubscriptionComparison";
 import type { PricingOption } from "./creditValue";
-import { PAYG_CREDIT_RATE, creditValue, fmtMoney, fmtNumber, fmtRate } from "./creditValue";
+import { PAYG_CREDIT_RATE, creditValue, hidesGoalPicker, isValueLed, fmtMoney, fmtNumber, fmtRate } from "./creditValue";
 
 export interface PackageFirstLayoutProps extends PricingLayoutProps {
   goal: GoalId | null;
@@ -621,6 +621,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
         </div>
 
         {/* Compact Best Fit — close under header */}
+        {!hidesGoalPicker(option) && (
         <div className="pt-5 pb-2">
           <p className="text-center text-sm font-medium leading-5 text-[#475467]">
             Tell us your goal, we&apos;ll recommend the{" "}
@@ -653,13 +654,14 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             })}
           </div>
         </div>
+        )}
 
         {/*
           Cards: 1-col phone → 2×2 tablet → 4-col desktop.
           Subgrid alignment only at xl so stacked rows stay compact on smaller screens.
         */}
         <div
-          className="pt-3 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-5 items-stretch"
+          className={`${hidesGoalPicker(option) ? "pt-8" : "pt-3"} grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4 xl:gap-5 items-stretch`}
           role="radiogroup"
           aria-label="Choose a plan"
         >
@@ -733,7 +735,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                         <span className="text-base leading-6 mt-3.5 font-semibold">{pricing.suffix}</span>
                       </p>
                     </div>
-                    {option === "b" && planId !== "basic" && (
+                    {isValueLed(option) && planId !== "basic" && (
                       <CreditChip>
                         Includes {fmtNumber(value.included)} credits · worth{" "}
                         {fmtMoney(value.includedValue)}
@@ -757,9 +759,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                         pricing.supportLines.map((line) => <p key={line}>{line}</p>)
                       )}
                     </div>
-                    {option === "b" && planId === "basic" && <PaygCreditNote billing={billing} />}
-                    {option === "b" && planId === "pro" && <CreditEquation billing={billing} />}
-                    {option === "b" && planId === "team" && <SeatsInlineAlert onTalkToSales={onTalkToSales} />}
+                    {isValueLed(option) && planId === "basic" && <PaygCreditNote billing={billing} />}
+                    {isValueLed(option) && planId === "pro" && <CreditEquation billing={billing} />}
+                    {isValueLed(option) && planId === "team" && <SeatsInlineAlert onTalkToSales={onTalkToSales} />}
                     {option === "b2" && planId === "pro" && <CreditCostCompare billing={billing} />}
                   </div>
                 </div>

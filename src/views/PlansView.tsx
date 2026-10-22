@@ -5,7 +5,7 @@ import type { ListPurchaseContext } from "../types";
 import { PackageFirstLayout } from "./pricing/PackageFirstLayout";
 import TalkToSalesModal from "./pricing/TalkToSalesModal";
 import type { PricingOption } from "./pricing/creditValue";
-import { PRICING_OPTIONS } from "./pricing/creditValue";
+import { PRICING_OPTIONS, hidesGoalPicker } from "./pricing/creditValue";
 
 interface PlansViewProps {
   onBack: () => void;
@@ -76,6 +76,7 @@ export default function PlansView({
 
   function changeOption(next: PricingOption) {
     setOption(next);
+    if (hidesGoalPicker(next)) clearRecommendation();
     const url = new URL(window.location.href);
     if (next === "current") url.searchParams.delete("option");
     else url.searchParams.set("option", next);
@@ -104,6 +105,8 @@ export default function PlansView({
 
   function selectCard(planId: PlanId) {
     setSelectedPlan(planId);
+    // Without the goal picker, selecting a card never tags it RECOMMENDED.
+    if (hidesGoalPicker(option)) return;
     const matching = GOAL_CHIPS.find((g) => g.recommends === planId);
     setGoal(matching ? matching.id : null);
   }
