@@ -903,6 +903,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
 
                 {/* Row 4 — plan facts (blue box below CTA) */}
                 <div className="flex flex-col self-stretch h-full min-h-0">
+                {option !== "b3" && (
                 <div className="px-4">
                   <PlanFacts
                     items={[
@@ -926,6 +927,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     }
                   />
                 </div>
+                )}
 
                 {/* Row 5 — feature checklists; addons bottom-aligned across cards */}
                 <div className="px-4 py-6 flex-1 min-h-0">
@@ -1028,6 +1030,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             </div>
 
             <div className="flex flex-col self-stretch h-full min-h-0">
+            {option !== "b3" && (
             <div className="px-4">
               <PlanFacts
                 items={[
@@ -1043,6 +1046,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 ]}
               />
             </div>
+            )}
 
             <div className="px-4 py-6 flex-1 min-h-0">
               <PlanFeatureChecklist
