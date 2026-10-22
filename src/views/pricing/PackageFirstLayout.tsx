@@ -516,8 +516,8 @@ const PLAN_GROUPS = [
     icon: faUser,
     first: "basic",
     column: "xl:[grid-column:1/span_2]",
-    panel: "bg-[#E6F4FB] border-[#B9E6FE]",
-    text: "text-[#00729F]",
+    panel: "bg-[#E4E7EC] border-[#D0D5DD]",
+    text: "text-[#475467]",
   },
   {
     id: "team",
