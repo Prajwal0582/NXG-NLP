@@ -555,8 +555,8 @@ function PlanPriceV3({
           icon: faCoins,
           title: "No credits included",
           points: [
-            { mark: "+", content: `Credits at ${fmtRate(PAYG_CREDIT_RATE)} each, as you go` },
-            { mark: "~", content: `${credits} would cost ${worth}` },
+            { mark: "+", content: `Buy credits as you go, at ${fmtRate(PAYG_CREDIT_RATE)} each` },
+            { mark: "~", content: "Needed to export leads or unlock emails" },
           ],
         }
       : planId === "pro"
