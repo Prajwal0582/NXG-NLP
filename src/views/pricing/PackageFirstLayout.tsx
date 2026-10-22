@@ -3,8 +3,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faArrowRight,
   faCartShopping,
+  faCircleInfo,
   faCoins,
-  faPhone,
   faTag,
   faUserPlus,
   faUsers,
@@ -312,8 +312,10 @@ function FactIcon({ label }: { label: string }) {
 /** Plan facts — height fits content (one- and two-line values keep the same 10px padding). */
 function PlanFacts({
   items,
+  footer,
 }: {
   items: { label: string; value: ReactNode; emphasize?: boolean }[];
+  footer?: ReactNode;
 }) {
   return (
     <div className="box-border flex flex-col gap-2 rounded-lg bg-[#F0F9FF] border border-[#D6EAF5] px-3 py-2.5">
@@ -328,6 +330,7 @@ function PlanFacts({
           </p>
         </div>
       ))}
+      {footer}
     </div>
   );
 }
@@ -429,108 +432,63 @@ function SeatsInlineAlert({ onTalkToSales }: { onTalkToSales: () => void }) {
   );
 }
 
-/** Option C — what the Pro price difference buys on Basic vs what Pro includes. */
-function CreditMathPanel({
-  billing,
-  onChoosePro,
-}: {
-  billing: PricingLayoutProps["billing"];
-  onChoosePro: () => void;
-}) {
-  const v = creditValue(billing);
-  const rows = [
-    {
-      label: `Basic + ${fmtMoney(v.difference)} in pay-as-you-go credits`,
-      credits: v.paygCredits,
-      value: `~${fmtNumber(v.paygCredits)} credits`,
-      bar: "bg-[#98A2B3]",
-      text: "text-[#475467]",
-    },
-    {
-      label: "Pro — credits included",
-      credits: v.included,
-      value: `${fmtNumber(v.included)} credits`,
-      bar: "bg-[#008DC3]",
-      text: "text-[#1D2939]",
-    },
-  ];
+/** Option B2 — full-bleed credit band at the top of the price section. */
+function CreditBand({ tone, children }: { tone: "value" | "neutral"; children: ReactNode }) {
   return (
     <div
-      data-keep-selection
-      className="flex flex-col gap-4 rounded-xl border border-[#D0D5DD] bg-white p-5 xl:col-span-2"
-      style={{ boxShadow: CARD_SHADOW }}
+      className={`-mx-4 -mt-4 mb-4 flex items-center gap-2 border-b px-4 py-2 text-sm font-semibold leading-5 ${
+        tone === "value"
+          ? "border-[#CDE9E0] bg-[#F2F9F7] text-[#026B5C]"
+          : "border-[#EAECF0] bg-[#F2F4F7] text-[#475467]"
+      }`}
     >
-      <div>
-        <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">Basic vs Pro · credit math</p>
-        <p className="mt-1 text-lg font-semibold leading-7 text-[#1D2939]">
-          Spend {fmtMoney(v.proPrice)}/{v.period} either way — Pro gets you{" "}
-          <span className="text-[#008DC3]">{v.extraPct}% more credits</span>
-        </p>
+      <FontAwesomeIcon icon={tone === "value" ? faCoins : faCircleInfo} className="text-[12px]" aria-hidden />
+      <span>{children}</span>
+    </div>
+  );
+}
+
+/** Option B2 (Pro) — what it costs to get the same credits on Basic vs Pro. */
+function CreditCostCompare({ billing }: { billing: PricingLayoutProps["billing"] }) {
+  const v = creditValue(billing);
+  const per = billing === "annual" ? "/yr" : "/mo";
+  return (
+    <div className="mt-4 overflow-hidden rounded-lg border border-[#EAECF0] text-sm leading-5">
+      <p className="bg-[#F9FAFB] px-3 py-1.5 text-xs font-medium uppercase leading-[18px] text-[#667085]">
+        To get {fmtNumber(v.included)} credits{billing === "annual" ? "" : " a month"}
+      </p>
+      <div className="flex items-baseline justify-between gap-3 border-t border-[#EAECF0] px-3 py-2 text-[#667085]">
+        <span>On Basic</span>
+        <span>
+          {fmtMoney(v.basicPrice)} + {fmtMoney(v.includedValue)} ={" "}
+          <span className="font-semibold text-[#475467]">
+            {fmtMoney(v.basicPrice + v.includedValue)}
+            {per}
+          </span>
+        </span>
       </div>
-      <div className="flex flex-col gap-3">
-        {rows.map((row) => (
-          <div key={row.label}>
-            <div className="flex items-baseline justify-between gap-3 text-sm leading-5">
-              <span className={`font-medium ${row.text}`}>{row.label}</span>
-              <span className={`shrink-0 font-semibold ${row.text}`}>{row.value}</span>
-            </div>
-            <div className="mt-1.5 h-2.5 w-full rounded-full bg-[#F2F4F7]">
-              <div
-                className={`h-full rounded-full ${row.bar}`}
-                style={{ width: `${(row.credits / v.included) * 100}%` }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-[18px] text-[#475467]">
-          Pay-as-you-go credits cost {fmtRate(PAYG_CREDIT_RATE)} each. Pro&apos;s included credits work out to about{" "}
-          {fmtRate(v.effectiveRate)} each.
-        </p>
-        <button
-          type="button"
-          onClick={onChoosePro}
-          className="h-10 shrink-0 rounded-lg border border-[#008DC3] bg-[#008DC3] px-4 text-sm font-medium text-white hover:bg-[#00729F]"
-        >
-          Choose Pro →
-        </button>
+      <div className="flex items-baseline justify-between gap-3 border-t border-[#CDE9E0] bg-[#F2F9F7] px-3 py-2 font-semibold text-[#026B5C]">
+        <span>On Pro</span>
+        <span>
+          {fmtMoney(v.proPrice)}
+          {per}
+        </span>
       </div>
     </div>
   );
 }
 
-/** Option C — seats banner routed to sales. */
-function SeatsBanner({ onTalkToSales }: { onTalkToSales: () => void }) {
+/** Option B2 (Team) — seats ask attached to the facts box, right under "Users". */
+function SeatsFactsFooter({ onTalkToSales }: { onTalkToSales: () => void }) {
   return (
-    <div
-      data-keep-selection
-      className="flex flex-col justify-between gap-4 rounded-xl border border-[#D0D5DD] bg-white p-5 xl:col-span-2"
-      style={{ boxShadow: CARD_SHADOW }}
-    >
-      <div className="flex items-start gap-3">
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#F0F9FF] text-[#008DC3]">
-          <FontAwesomeIcon icon={faUsers} className="text-[16px]" aria-hidden />
-        </span>
-        <div>
-          <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">Team · more seats</p>
-          <p className="mt-1 text-lg font-semibold leading-7 text-[#1D2939]">Need more than 5 seats?</p>
-          <p className="mt-1 text-sm leading-5 text-[#475467]">
-            Team includes 5 users. Our sales team can add seats and volume pricing for larger teams.
-          </p>
-        </div>
-      </div>
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-xs leading-[18px] text-[#667085]">One click — we&apos;ll call you within 1 business day.</p>
-        <button
-          type="button"
-          onClick={onTalkToSales}
-          className="inline-flex h-10 shrink-0 items-center justify-center gap-2 rounded-lg border border-[#008DC3] bg-white px-4 text-sm font-medium text-[#008DC3] hover:bg-[#F0F9FF]"
-        >
-          <FontAwesomeIcon icon={faPhone} className="text-[14px]" aria-hidden />
-          Talk to sales
-        </button>
-      </div>
+    <div className="flex items-start gap-2 rounded-md border border-[#B9E6FE] bg-white px-2.5 py-2">
+      <span className="flex h-[18px] w-[18px] shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+        <FontAwesomeIcon icon={faUserPlus} className="text-[13px]" />
+      </span>
+      <p className="min-w-0 text-xs leading-[18px] text-[#475467]">
+        <span className="font-semibold text-[#1D2939]">Need more than 5 seats?</span> We&apos;ll set up custom
+        seats. <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
+      </p>
     </div>
   );
 }
@@ -696,13 +654,6 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
           </div>
         </div>
 
-        {option === "c" && (
-          <div className="pt-3 grid grid-cols-1 xl:grid-cols-4 gap-4 xl:gap-5">
-            <CreditMathPanel billing={billing} onChoosePro={() => onCta("pro")} />
-            <SeatsBanner onTalkToSales={onTalkToSales} />
-          </div>
-        )}
-
         {/*
           Cards: 1-col phone → 2×2 tablet → 4-col desktop.
           Subgrid alignment only at xl so stacked rows stay compact on smaller screens.
@@ -761,6 +712,16 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
 
                 {/* Row 2 — price + discount (left-aligned; 20px gap under price) */}
                 <div className="p-4 self-start w-full">
+                  {option === "b2" &&
+                    (planId === "basic" ? (
+                      <CreditBand tone="neutral">
+                        Credits at {fmtRate(PAYG_CREDIT_RATE)} each, as you go
+                      </CreditBand>
+                    ) : (
+                      <CreditBand tone="value">
+                        {fmtNumber(value.included)} credits included · worth {fmtMoney(value.includedValue)}
+                      </CreditBand>
+                    ))}
                   <div className="flex flex-col">
                     <div className="flex items-start gap-1.5">
                       <span className="text-sm font-normal leading-5 text-[#475467] pt-1.5 shrink-0">
@@ -799,6 +760,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     {option === "b" && planId === "basic" && <PaygCreditNote billing={billing} />}
                     {option === "b" && planId === "pro" && <CreditEquation billing={billing} />}
                     {option === "b" && planId === "team" && <SeatsInlineAlert onTalkToSales={onTalkToSales} />}
+                    {option === "b2" && planId === "pro" && <CreditCostCompare billing={billing} />}
                   </div>
                 </div>
 
@@ -829,35 +791,21 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                       {
                         label: "Credits",
                         value:
-                          option === "a" && planId !== "basic" ? (
-                            <>
-                              {summary.creditsLabel(billing)}{" "}
-                              <span className="font-semibold text-[#0D7867]">
-                                (≈ {fmtMoney(value.includedValue)} value)
-                              </span>
-                            </>
-                          ) : option === "b" && planId === "basic" ? (
+                          option !== "current" && planId === "basic" ? (
                             `Pay as you go · ${fmtRate(PAYG_CREDIT_RATE)}/credit`
                           ) : (
                             summary.creditsLabel(billing)
                           ),
                         emphasize: planId === "pro" || planId === "team",
                       },
-                      {
-                        label: "Users",
-                        value:
-                          summary.users,
-                        emphasize: planId === "team",
-                      },
+                      { label: "Users", value: summary.users, emphasize: planId === "team" },
                     ]}
+                    footer={
+                      option === "b2" && planId === "team" ? (
+                        <SeatsFactsFooter onTalkToSales={onTalkToSales} />
+                      ) : undefined
+                    }
                   />
-                  {option === "a" && planId === "team" && (
-                    <p className="mt-2 flex items-center gap-1.5 px-1 text-xs leading-[18px] text-[#475467]">
-                      <FontAwesomeIcon icon={faPhone} className="text-[11px] text-[#008DC3]" aria-hidden />
-                      Need more than 5 seats?{" "}
-                      <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
-                    </p>
-                  )}
                 </div>
 
                 {/* Row 5 — feature checklists; addons bottom-aligned across cards */}
@@ -911,6 +859,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             </div>
 
             <div className="p-4 self-start w-full">
+              {option === "b2" && <CreditBand tone="neutral">One-time purchase · no subscription</CreditBand>}
               <div className="flex flex-col">
                 {buyListPriceDisplay === "Custom price" ? (
                   <p className="font-semibold text-[#1D2939] text-[36px] leading-[44px] tracking-[-0.72px]">

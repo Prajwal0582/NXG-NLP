@@ -2,13 +2,12 @@ import type { BillingPeriod } from "../../data/pricingPlans";
 import { PLANS } from "../../data/pricingPlans";
 
 /** Prototype pricing options shown side by side for review (Current = shipped layout). */
-export type PricingOption = "current" | "a" | "b" | "c";
+export type PricingOption = "current" | "b" | "b2";
 
 export const PRICING_OPTIONS: { id: PricingOption; label: string; description: string }[] = [
   { id: "current", label: "Current", description: "Shipped layout, unchanged." },
-  { id: "a", label: "A · Light touch", description: "Credit value in the facts box, Talk to sales link on Team." },
-  { id: "b", label: "B · Value-led", description: "Credit value chip, 'pay more, get more credits' box on Pro, seats alert on Team." },
-  { id: "c", label: "C · Guided comparison", description: "Basic vs Pro credit math and a seats banner above the cards." },
+  { id: "b", label: "B · Value-led", description: "Credit chip under the price, 'you pay / you get' box on Pro, seats alert on Team." },
+  { id: "b2", label: "B2 · Value band", description: "Credit band on every card, Basic vs Pro cost to get the credits, seats ask in Team's facts." },
 ];
 
 /** Ad hoc (pay-as-you-go) credit rate available to Basic users. */
@@ -24,19 +23,12 @@ export function creditValue(billing: BillingPeriod) {
   const included = billing === "annual" ? 6000 : 500;
   const basicPrice = planPrice("basic", billing);
   const proPrice = planPrice("pro", billing);
-  const difference = proPrice - basicPrice;
-  const paygCredits = Math.floor(difference / PAYG_CREDIT_RATE);
-  const effectiveRate = difference / included;
   return {
-    period: billing === "annual" ? "yr" : "mo",
     included,
+    basicPrice,
     proPrice,
-    difference,
-    paygCredits,
+    difference: proPrice - basicPrice,
     includedValue: included * PAYG_CREDIT_RATE,
-    effectiveRate,
-    savingsPct: Math.round((1 - effectiveRate / PAYG_CREDIT_RATE) * 100),
-    extraPct: Math.round((included / paygCredits - 1) * 100),
   };
 }
 
