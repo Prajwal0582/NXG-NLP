@@ -644,9 +644,9 @@ function PlanPriceV3({
           }
         : {
             icon: faUsers,
-            title: "Pro + 5 users",
+            title: `${credits} + 5 users`,
             points: [
-              { mark: "=", content: `${credits} shared, worth ${worth}` },
+              { mark: "=", content: `Credits shared across the team, worth ${worth}` },
               {
                 mark: "+",
                 content: (
