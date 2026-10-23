@@ -7,7 +7,7 @@ export type PricingOption = "current" | "b" | "b3";
 export const PRICING_OPTIONS: { id: PricingOption; label: string; description: string }[] = [
   { id: "current", label: "Current", description: "Shipped layout, unchanged." },
   { id: "b", label: "B · Value-led", description: "Credit chip under the price, 'you pay / you get' box on Pro, seats alert on Team." },
-  { id: "b3", label: "B3 · Value-led v2", description: "No goal picker, compact price with strike-through, credit summary under the price." },
+  { id: "b3", label: "B3 · Value focused", description: "No goal picker, compact price with strike-through, credit summary under the price." },
 ];
 
 /** Option B's value-led cards (chip, you pay / you get, seats alert). */
