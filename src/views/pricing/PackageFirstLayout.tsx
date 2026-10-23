@@ -194,15 +194,19 @@ function PlanFeatureChecklist({
   plan,
   expanded,
   onToggle,
+  compact = false,
 }: {
   plan: (typeof PLANS)[number];
   expanded: Record<string, boolean>;
   onToggle: (key: string) => void;
+  /** Option B3 — tighter section and row spacing (type stays Body 14/20). */
+  compact?: boolean;
 }) {
+  const sectionGap = compact ? "gap-2" : "gap-3";
   return (
-    <div className="flex h-full min-h-0 flex-col gap-6">
+    <div className={`flex h-full min-h-0 flex-col ${compact ? "gap-5" : "gap-6"}`}>
       {plan.accessItems.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col ${sectionGap}`}>
           <p className="text-sm font-semibold leading-5 text-[#667085]">{plan.accessTitle}</p>
           {plan.accessItems.map((item) => (
             <div key={item} className="flex items-start gap-2">
@@ -212,7 +216,7 @@ function PlanFeatureChecklist({
           ))}
         </div>
       )}
-      <div className="flex flex-col gap-3">
+      <div className={`flex flex-col ${sectionGap}`}>
         <p className="text-sm font-semibold leading-5 text-[#667085]">{plan.includedTitle}</p>
         <FeatureRows
           planId={plan.id}
@@ -224,7 +228,7 @@ function PlanFeatureChecklist({
         />
       </div>
       {plan.notIncludedItems && plan.notIncludedItems.length > 0 && (
-        <div className="flex flex-col gap-3">
+        <div className={`flex flex-col ${sectionGap}`}>
           <p className="text-sm font-semibold leading-5 text-[#667085]">{plan.notIncludedTitle}</p>
           <FeatureRows
             planId={plan.id}
@@ -237,7 +241,7 @@ function PlanFeatureChecklist({
         </div>
       )}
       {plan.addons && (
-        <div className="mt-auto flex flex-col gap-3 pt-2 border-t border-[#EAECF0]">
+        <div className={`mt-auto flex flex-col ${sectionGap} pt-2 border-t border-[#EAECF0]`}>
           <p className="text-sm font-semibold leading-5 text-[#667085]">Additional paid features</p>
           {plan.addons.map((addon) => (
             <div key={addon.label} className="flex items-center justify-between gap-2">
@@ -555,7 +559,7 @@ function GroupLabel({ group }: { group: (typeof PLAN_GROUPS)[number] }) {
     <p
       className={`relative col-span-full flex items-center gap-2 text-sm font-semibold leading-5 ${group.text} ${group.column} xl:[grid-row:1]`}
     >
-      <FontAwesomeIcon icon={group.icon} className="text-[13px]" aria-hidden />
+      <FontAwesomeIcon icon={group.icon} className="text-[14px]" aria-hidden />
       {group.label}
     </p>
   );
@@ -573,16 +577,16 @@ function CreditSummary({
 }) {
   return (
     <div className="mt-4 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-3">
-      <p className="flex items-center gap-2 text-base font-semibold leading-6 text-[#1D2939]">
+      <p className="flex items-center gap-2 text-sm font-semibold leading-5 text-[#1D2939]">
         <span className="flex size-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
-          <FontAwesomeIcon icon={icon} className="text-[15px]" />
+          <FontAwesomeIcon icon={icon} className="text-[14px]" />
         </span>
         {title}
       </p>
-      <ul className="mt-2 flex flex-col gap-1.5">
+      <ul className="mt-1.5 flex flex-col gap-1">
         {points.map((point, i) => (
-          <li key={i} className="flex items-start gap-2 text-sm leading-5 text-[#475467]">
-            <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
+          <li key={i} className="flex items-start gap-2 text-xs leading-[18px] text-[#475467]">
+            <span className="flex h-[18px] w-5 shrink-0 items-center justify-center" aria-hidden>
               <span className="size-1.5 rounded-full bg-[#008DC3]" />
             </span>
             <span className="min-w-0">{point}</span>
@@ -651,7 +655,7 @@ function PlanPriceV3({
           </span>
         )}
       </div>
-      <p className="mt-2 text-sm leading-5 text-[#475467]">{billingNote}</p>
+      <p className="mt-1 text-xs leading-[18px] text-[#475467]">{billingNote}</p>
       {planId === "pro" ? <ProCreditSummary billing={billing} /> : <CreditSummary {...summary} />}
     </div>
   );
@@ -662,21 +666,21 @@ function ProCreditSummary({ billing }: { billing: PricingLayoutProps["billing"] 
   const v = creditValue(billing);
   const per = billing === "annual" ? "" : "/mo";
   return (
-    <div className="mt-4 flex flex-col gap-3 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-3">
+    <div className="mt-4 flex flex-col gap-2 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-3">
       <div className="flex items-start gap-2">
-        <span className="flex h-6 w-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
-          <FontAwesomeIcon icon={faCoins} className="text-[15px]" />
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+          <FontAwesomeIcon icon={faCoins} className="text-[14px]" />
         </span>
-        <p className="min-w-0 flex-1 text-base font-semibold leading-6 text-[#1D2939]">
+        <p className="min-w-0 flex-1 text-sm font-semibold leading-5 text-[#1D2939]">
           {fmtNumber(v.included)} credits{per} included
         </p>
-        <span className="shrink-0 rounded-md bg-[#0D7867] px-2 py-0.5 text-xs font-semibold leading-5 text-white">
+        <span className="shrink-0 rounded-md bg-[#0D7867] px-1.5 text-xs font-semibold leading-5 text-white">
           Save {fmtMoney(v.includedValue - v.difference)}
           {per}
         </span>
       </div>
-      <div className="flex items-start gap-2 text-sm leading-5 text-[#475467]">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
+      <div className="flex items-start gap-2 text-xs leading-[18px] text-[#475467]">
+        <span className="flex h-[18px] w-5 shrink-0 items-center justify-center" aria-hidden>
           <span className="size-1.5 rounded-full bg-[#008DC3]" />
         </span>
         <p className="min-w-0">
@@ -688,9 +692,9 @@ function ProCreditSummary({ billing }: { billing: PricingLayoutProps["billing"] 
           </span>
         </p>
       </div>
-      <div className="flex items-start gap-2 text-sm leading-5 text-[#475467]">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
-          <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[13px]" />
+      <div className="flex items-start gap-2 text-xs leading-[18px] text-[#475467]">
+        <span className="flex h-[18px] w-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+          <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[14px]" />
         </span>
         <p className="min-w-0">Add-on credits power exports, email unlocks, campaigns, MCP and CRM integrations.</p>
       </div>
@@ -724,6 +728,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
 
   const value = creditValue(billing);
   const grouped = groupsPlans(option);
+  const compact = option === "b3";
 
   const buyPlan = BUY_LIST_PLAN;
   const buySelected = selectedPlan === "buy-list";
@@ -749,7 +754,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
   return (
     <>
       {/* Responsive inset: tight on phone, full desktop padding */}
-      <div className="w-full px-4 sm:px-6 lg:px-10 xl:px-16 2xl:px-28 pt-4 sm:pt-6 pb-16 sm:pb-20">
+      <div className={`w-full px-4 sm:px-6 lg:px-10 ${compact ? "xl:px-10 2xl:px-20" : "xl:px-16 2xl:px-28"} pt-4 sm:pt-6 pb-16 sm:pb-20`}>
         {/* One panel: context + billing + annual offer (no floating billing row) */}
         <div data-pricing-header className="w-full">
           <div className="relative w-full bg-white border border-[#D0D5DD] border-l-8 border-l-[#79C1E9] rounded-lg overflow-visible">
@@ -766,7 +771,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                   </svg>
                 </button>
                 <div className="min-w-0">
-                  <h1 className="text-xl sm:text-2xl font-semibold leading-7 sm:leading-8 text-[#1D2939]">
+                  <h1 className={`font-semibold text-[#1D2939] ${compact ? "text-xl leading-[30px]" : "text-xl sm:text-2xl leading-7 sm:leading-8"}`}>
                     Choose the <span className="text-[#008DC3]">right plan</span> for your business
                   </h1>
                   <p className="mt-1 text-sm font-normal leading-5 text-[#667085]">
@@ -909,7 +914,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 style={{ boxShadow: CARD_SHADOW }}
               >
                 {/* Row 1 — header (overlays live here so subgrid stays 5 children) */}
-                <div className={`relative px-4 pt-6 pb-4 rounded-t-xl self-stretch ${HEADER_SURFACE[plan.id]}`}>
+                <div className={`relative px-4 ${compact ? "pt-5 pb-3" : "pt-6 pb-4"} rounded-t-xl self-stretch ${HEADER_SURFACE[plan.id]}`}>
                   {isSelected && (
                     <div
                       aria-hidden
@@ -917,11 +922,11 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     />
                   )}
                   {showBadge && <PlanBadge label={activeBadgeLabel} />}
-                  <div className="flex flex-col gap-2">
+                  <div className={`flex flex-col ${compact ? "gap-1" : "gap-2"}`}>
                     <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">
                       {plan.category}
                     </p>
-                    <h3 className="text-2xl font-semibold leading-8 text-[#008DC3]">{plan.name}</h3>
+                    <h3 className={`font-semibold text-[#008DC3] ${compact ? "text-xl leading-[30px]" : "text-2xl leading-8"}`}>{plan.name}</h3>
                     {option !== "b3" && (
                       <p className="text-sm font-normal leading-5 text-[#475467]">{plan.description}</p>
                     )}
@@ -929,7 +934,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
 
                 {/* Row 2 — price + discount (left-aligned; 20px gap under price) */}
-                <div className="p-4 self-start w-full">
+                <div className={`${compact ? "px-4 py-3" : "p-4"} self-start w-full`}>
                   {option === "b2" &&
                     (planId === "basic" ? (
                       <CreditBand tone="neutral">
@@ -987,7 +992,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
 
                 {/* Row 3 — CTA */}
-                <div className="p-4 self-stretch">
+                <div className={`${compact ? "px-4 py-3" : "p-4"} self-stretch`}>
                   <button
                     type="button"
                     onClick={(e) => {
@@ -1033,11 +1038,12 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 )}
 
                 {/* Row 5 — feature checklists; addons bottom-aligned across cards */}
-                <div className="px-4 py-6 flex-1 min-h-0">
+                <div className={`px-4 ${compact ? "pt-3 pb-5" : "py-6"} flex-1 min-h-0`}>
                   <PlanFeatureChecklist
                     plan={fullPlan}
                     expanded={expanded}
                     onToggle={toggleExpand}
+                    compact={compact}
                   />
                 </div>
                 </div>
@@ -1070,7 +1076,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             }`}
             style={{ boxShadow: CARD_SHADOW }}
           >
-            <div className={`relative px-4 pt-6 pb-4 rounded-t-xl self-stretch ${HEADER_SURFACE["buy-list"]}`}>
+            <div className={`relative px-4 ${compact ? "pt-5 pb-3" : "pt-6 pb-4"} rounded-t-xl self-stretch ${HEADER_SURFACE["buy-list"]}`}>
               {buySelected && (
                 <div
                   aria-hidden
@@ -1078,18 +1084,18 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 />
               )}
               {buyBadge && <PlanBadge label={activeBadgeLabel} />}
-              <div className="flex flex-col gap-2">
+              <div className={`flex flex-col ${compact ? "gap-1" : "gap-2"}`}>
                 <p className="text-xs font-medium uppercase leading-[18px] text-[#667085]">
                   {buyPlan.category}
                 </p>
-                <h3 className="text-2xl font-semibold leading-8 text-[#008DC3]">{buyPlan.name}</h3>
+                <h3 className={`font-semibold text-[#008DC3] ${compact ? "text-xl leading-[30px]" : "text-2xl leading-8"}`}>{buyPlan.name}</h3>
                 {option !== "b3" && (
                   <p className="text-sm font-normal leading-5 text-[#475467]">{buyPlan.description}</p>
                 )}
               </div>
             </div>
 
-            <div className="p-4 self-start w-full">
+            <div className={`${compact ? "px-4 py-3" : "p-4"} self-start w-full`}>
               {option === "b2" && <CreditBand tone="neutral">One-time purchase · no subscription</CreditBand>}
               <div className="flex flex-col">
                 {buyListPriceDisplay === "Custom price" ? (
@@ -1102,7 +1108,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     <span className="text-[36px] leading-[44px]">{buyListPriceDisplay}</span>
                   </p>
                 )}
-                <div className="mt-4 text-sm leading-5 text-[#0D7867]">
+                <div className={`text-[#0D7867] ${compact ? "mt-1 text-xs leading-[18px]" : "mt-4 text-sm leading-5"}`}>
                   {buyListSupportLines.map((line) => (
                     <p key={line}>{line}</p>
                   ))}
@@ -1120,7 +1126,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
               </div>
             </div>
 
-            <div className="p-4 self-stretch">
+            <div className={`${compact ? "px-4 py-3" : "p-4"} self-stretch`}>
               <button
                 type="button"
                 onClick={(e) => {
@@ -1156,11 +1162,12 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             </div>
             )}
 
-            <div className="px-4 py-6 flex-1 min-h-0">
+            <div className={`px-4 ${compact ? "pt-3 pb-5" : "py-6"} flex-1 min-h-0`}>
               <PlanFeatureChecklist
                 plan={buyPlan}
                 expanded={expanded}
                 onToggle={toggleExpand}
+                compact={compact}
               />
             </div>
             </div>
