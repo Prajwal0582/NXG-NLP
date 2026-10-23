@@ -2,12 +2,11 @@ import type { BillingPeriod } from "../../data/pricingPlans";
 import { PLANS } from "../../data/pricingPlans";
 
 /** Prototype pricing options shown side by side for review (Current = shipped layout). */
-export type PricingOption = "current" | "b" | "b2" | "b3";
+export type PricingOption = "current" | "b" | "b3";
 
 export const PRICING_OPTIONS: { id: PricingOption; label: string; description: string }[] = [
   { id: "current", label: "Current", description: "Shipped layout, unchanged." },
   { id: "b", label: "B · Value-led", description: "Credit chip under the price, 'you pay / you get' box on Pro, seats alert on Team." },
-  { id: "b2", label: "B2 · Value band", description: "Credit band on every card, Basic vs Pro cost to get the credits, seats ask in Team's facts." },
   { id: "b3", label: "B3 · Value-led v2", description: "No goal picker, compact price with strike-through, credit summary under the price." },
 ];
 
