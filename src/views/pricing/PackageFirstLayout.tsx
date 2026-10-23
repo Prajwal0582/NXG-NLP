@@ -9,6 +9,7 @@ import {
   faUser,
   faUserPlus,
   faUsers,
+  faWandMagicSparkles,
 } from "@fortawesome/free-solid-svg-icons";
 import { faCircleCheck, faEye } from "@fortawesome/free-regular-svg-icons";
 import type { IconDefinition } from "@fortawesome/fontawesome-svg-core";
@@ -625,25 +626,8 @@ function PlanPriceV3({
             { mark: "=", content: "Credits power Genie features like exports, email unlocks and campaigns" },
           ],
         }
-      : planId === "pro"
-        ? {
-            icon: faCoins,
-            title: annual ? `${fmtNumber(v.included)} credits included` : `${credits} included`,
-            points: [
-              { mark: "=", content: annual ? "Provided upfront for the year" : "Added every month" },
-              {
-                mark: "+",
-                content: (
-                  <span className="font-semibold text-[#0D7867]">
-                    Save {fmtMoney(v.includedValue - v.difference)}
-                    {annual ? "" : "/mo"} vs. buying them on Basic
-                  </span>
-                ),
-              },
-            ],
-          }
-        : {
-            icon: faUsers,
+      : {
+          icon: faUsers,
             title: `${credits} + 5 users`,
             points: [
               { mark: "=", content: `Credits shared across the team, worth ${worth}` },
@@ -673,7 +657,48 @@ function PlanPriceV3({
         )}
       </div>
       <p className="mt-2 text-sm leading-5 text-[#475467]">{billingNote}</p>
-      <CreditSummary {...summary} />
+      {planId === "pro" ? <ProCreditSummary billing={billing} /> : <CreditSummary {...summary} />}
+    </div>
+  );
+}
+
+/** Option B3 (Pro) — credits headline with a Save chip, value line, and what credits power. */
+function ProCreditSummary({ billing }: { billing: PricingLayoutProps["billing"] }) {
+  const v = creditValue(billing);
+  const per = billing === "annual" ? "" : "/mo";
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-3">
+      <div className="flex items-start gap-2">
+        <span className="flex h-6 w-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+          <FontAwesomeIcon icon={faCoins} className="text-[15px]" />
+        </span>
+        <p className="min-w-0 flex-1 text-base font-semibold leading-6 text-[#1D2939]">
+          {fmtNumber(v.included)} credits{per} included
+        </p>
+        <span className="shrink-0 rounded-md bg-[#0D7867] px-2 py-0.5 text-xs font-semibold leading-5 text-white">
+          Save {fmtMoney(v.includedValue - v.difference)}
+          {per}
+        </span>
+      </div>
+      <div className="flex items-start gap-2 text-sm leading-5 text-[#475467]">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
+          <span className="size-1.5 rounded-full bg-[#008DC3]" />
+        </span>
+        <p className="min-w-0">
+          Credits worth{" "}
+          <span className="font-semibold text-[#1D2939]">
+            {fmtMoney(v.includedValue)}
+            {per} for only {fmtMoney(v.difference)}
+            {per} more than Basic
+          </span>
+        </p>
+      </div>
+      <div className="flex items-start gap-2 text-sm leading-5 text-[#475467]">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#008DC3]" aria-hidden>
+          <FontAwesomeIcon icon={faWandMagicSparkles} className="text-[13px]" />
+        </span>
+        <p className="min-w-0">Add-on credits power exports, email unlocks, campaigns, MCP and CRM integrations.</p>
+      </div>
     </div>
   );
 }
