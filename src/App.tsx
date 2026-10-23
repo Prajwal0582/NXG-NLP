@@ -62,7 +62,10 @@ function isFreemiumScenario(s: UserScenario) {
 
 export default function App() {
   const [scenario, setScenario] = useState<UserScenario>("freemium-20");
-  const [view, setView] = useState<View>("scenario-launch");
+  // ?view=pricing opens Pricing directly (shareable link for reviews).
+  const [view, setView] = useState<View>(() =>
+    new URLSearchParams(window.location.search).get("view") === "pricing" ? "plans" : "scenario-launch",
+  );
   const [activeTab, setActiveTab] = useState<ActiveTab>("business");
   const [promptsRemaining, setPromptsRemaining] = useState(getInitialPrompts("freemium-20"));
   const [creditsRemaining, setCreditsRemaining] = useState(getInitialCredits("freemium-20"));
