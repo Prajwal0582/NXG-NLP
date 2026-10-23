@@ -569,7 +569,7 @@ function CreditSummary({
 }: {
   icon: IconDefinition;
   title: string;
-  points: { mark: string; content: ReactNode }[];
+  points: ReactNode[];
 }) {
   return (
     <div className="mt-4 rounded-lg border border-[#EAECF0] bg-[#F9FAFB] px-3 py-3">
@@ -579,13 +579,13 @@ function CreditSummary({
         </span>
         {title}
       </p>
-      <ul className="mt-1 flex flex-col gap-0.5 pl-7">
+      <ul className="mt-2 flex flex-col gap-1.5">
         {points.map((point, i) => (
-          <li key={i} className="flex gap-1.5 text-sm leading-5 text-[#667085]">
-            <span className="w-3 shrink-0 text-center" aria-hidden>
-              {point.mark}
+          <li key={i} className="flex items-start gap-2 text-sm leading-5 text-[#475467]">
+            <span className="flex h-5 w-5 shrink-0 items-center justify-center" aria-hidden>
+              <span className="size-1.5 rounded-full bg-[#008DC3]" />
             </span>
-            <span className="min-w-0">{point.content}</span>
+            <span className="min-w-0">{point}</span>
           </li>
         ))}
       </ul>
@@ -622,23 +622,18 @@ function PlanPriceV3({
           icon: faCoins,
           title: "No credits included",
           points: [
-            { mark: "+", content: `Buy credits as you go, at ${fmtRate(PAYG_CREDIT_RATE)} each` },
-            { mark: "=", content: "Credits power Genie features like exports, email unlocks and campaigns" },
+            `Buy credits as you go, at ${fmtRate(PAYG_CREDIT_RATE)} each`,
+            "Credits power Genie features like exports, email unlocks and campaigns",
           ],
         }
       : {
           icon: faUsers,
             title: `${credits} + 5 users`,
             points: [
-              { mark: "=", content: `Credits shared across the team, worth ${worth}` },
-              {
-                mark: "+",
-                content: (
-                  <>
-                    Need more seats? <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
-                  </>
-                ),
-              },
+              `Credits shared across the team, worth ${worth}`,
+              <>
+                Need more seats? <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} />
+              </>,
             ],
           };
 
@@ -1117,8 +1112,8 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     icon={faCartShopping}
                     title="One-time purchase"
                     points={[
-                      { mark: "=", content: "No subscription needed" },
-                      { mark: "+", content: "12 months re-export access" },
+                      "No subscription needed",
+                      "12 months re-export access",
                     ]}
                   />
                 )}
