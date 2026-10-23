@@ -22,7 +22,7 @@ import {
   resolveTooltip,
 } from "../../data/pricingPlans";
 import type { PricingLayoutProps } from "./pricingTypes";
-import { CARD_SHADOW } from "./pricingTypes";
+import { CARD_SHADOW, GENIE_SHADOW_SM } from "./pricingTypes";
 import SubscriptionComparison from "./SubscriptionComparison";
 import type { PricingOption } from "./creditValue";
 import { PAYG_CREDIT_RATE, creditValue, groupsPlans, hidesGoalPicker, isValueLed, fmtMoney, fmtNumber, fmtRate } from "./creditValue";
@@ -692,7 +692,12 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
       <div className={`w-full px-4 sm:px-6 lg:px-10 ${compact ? "xl:px-10 2xl:px-20" : "xl:px-16 2xl:px-28"} pt-4 sm:pt-6 pb-16 sm:pb-20`}>
         {/* One panel: context + billing + annual offer (no floating billing row) */}
         <div data-pricing-header className="w-full">
-          <div className="relative w-full bg-white border border-[#D0D5DD] border-l-8 border-l-[#79C1E9] rounded-lg overflow-visible">
+          <div
+            className={`relative w-full bg-white border border-l-8 border-l-[#79C1E9] rounded-lg overflow-visible ${
+              compact ? "border-[#79C1E9]" : "border-[#D0D5DD]"
+            }`}
+            style={compact ? { boxShadow: GENIE_SHADOW_SM } : undefined}
+          >
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between lg:gap-8 px-4 py-4 sm:px-6 md:px-8">
               <div className="flex items-center gap-3 min-w-0 lg:max-w-[55%]">
                 <button
