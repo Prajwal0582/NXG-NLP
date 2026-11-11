@@ -112,13 +112,21 @@ export default function TopHeader({
                   : ` You have ${promptsRemaining} remaining.`}
               </p>
 
-              <button
-                onClick={() => { setPillOpen(false); onPlans(); }}
-                className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors"
-              >
-                Upgrade account
-              </button>
-              <p className="text-center text-[11px] text-[#667085] mt-2">Get unlimited prompts & premium features</p>
+              {scenario === "freemium-activating" ? (
+                <p className="rounded-lg bg-[#F2F4F7] px-3 py-2 text-center text-xs text-[#475467]">
+                  Your subscription is being activated. You&apos;ll have full access shortly.
+                </p>
+              ) : (
+                <>
+                  <button
+                    onClick={() => { setPillOpen(false); onPlans(); }}
+                    className="w-full bg-[#016dee] hover:bg-[#0052cc] text-white text-sm font-semibold py-2.5 px-4 rounded-lg transition-colors"
+                  >
+                    Upgrade account
+                  </button>
+                  <p className="text-center text-[11px] text-[#667085] mt-2">Get unlimited prompts & premium features</p>
+                </>
+              )}
             </div>
           )}
         </div>

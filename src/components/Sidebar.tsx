@@ -9,6 +9,8 @@ interface SidebarProps {
   currentView: View;
   onNavigate: (view: View) => void;
   isSubscriber: boolean;
+  /** Freemium who bought a subscription that is still being verified (Figma "Pending order notifications"). */
+  subscriptionActivating?: boolean;
   onPlans: () => void;
 }
 
@@ -133,6 +135,7 @@ export default function Sidebar({
   currentView,
   onNavigate,
   isSubscriber,
+  subscriptionActivating = false,
   onPlans,
 }: SidebarProps) {
   const isSearchActive =
@@ -214,7 +217,18 @@ export default function Sidebar({
 
       {/* Bottom section */}
       <div className="mt-auto flex w-full flex-col gap-3">
-        {!isSubscriber && (
+        {!isSubscriber && subscriptionActivating && (
+          <div className="px-4">
+            <div className="flex w-full flex-col gap-1 rounded-lg border border-[#98A2B3] bg-[#475467] p-4">
+              <p className="text-sm font-semibold leading-5 text-white">Activating your subscription plan shortly!</p>
+              <p className="text-xs font-normal leading-[18px] text-white">
+                A Salesgenie team member will reach out to confirm your order. You&apos;ll see full data as soon as it&apos;s
+                approved.
+              </p>
+            </div>
+          </div>
+        )}
+        {!isSubscriber && !subscriptionActivating && (
           <div className="px-4">
             <div className="flex w-full flex-col rounded-lg border border-[#98A2B3] bg-[#475467] p-4">
               <div className="flex flex-col gap-2">
@@ -230,7 +244,7 @@ export default function Sidebar({
                   onClick={onPlans}
                   className="w-full rounded-md border border-[#008DC3] bg-[#008DC3] px-3 py-1.5 text-sm font-medium leading-5 text-white transition-colors hover:bg-[#00729F]"
                 >
-                  Access pricing
+                  See options
                 </button>
               </div>
             </div>

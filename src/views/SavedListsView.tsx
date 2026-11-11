@@ -1,9 +1,21 @@
 import { useState } from "react";
 import type { UserScenario } from "../types";
+import type { SavedList } from "../data/savedLists";
+import { compactCount } from "../data/savedLists";
+import PageBanner from "../components/PageBanner";
 
 interface SavedListsViewProps {
   scenario: UserScenario;
-  onStartAISearch: () => void;
+  lists: SavedList[];
+  /** The open list detail (kept in App so Export configuration / checkout can come back to it). */
+  openListId: string | null;
+  onOpenList: (id: string | null) => void;
+  onSearchLeads: () => void;
+  /** Freemium banner "See options" → pricing (Pro selected, Buy list shows this list). */
+  onSeeOptions: (list: SavedList) => void;
+  /** Subscription activating: banner "Buy List" → list checkout directly. */
+  onBuyList: (list: SavedList) => void;
+  onExport: (list: SavedList) => void;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -88,14 +100,6 @@ interface CardChip {
   variant: ChipVariant;
 }
 
-interface SavedListCard {
-  name: string;
-  date: string;
-  source: "smart" | "database";
-  sourceLabel: string;
-  chips: CardChip[];
-}
-
 interface SavingCard {
   name: string;
   progress: number;
@@ -105,29 +109,13 @@ const SAVING_CARDS: SavingCard[] = [
   { name: "Healthcare business California", progress: 65 },
 ];
 
-const CARDS: SavedListCard[] = [
-  {
-    name: "Bakeries Test",
-    date: "created on Jan 05, 2024 10:00AM by Frank S",
-    source: "smart",
-    sourceLabel: "US Businesses: Smart recommendation",
-    chips: [{ label: "Prospects 10k", variant: "prospect" }],
-  },
-  {
-    name: "Bakeries Test 2",
-    date: "created on Jan 05, 2024 10:00AM by Frank S",
-    source: "smart",
-    sourceLabel: "US Businesses: Smart recommendation",
-    chips: [{ label: "Prospects 10k", variant: "prospect" }],
-  },
-  {
-    name: "Restaurants",
-    date: "created on Feb 15, 2024 10:00AM by Frank S",
-    source: "database",
-    sourceLabel: "US Businesses",
-    chips: [{ label: "Records 10k", variant: "record" }],
-  },
-];
+function listChips(list: SavedList): CardChip[] {
+  return [
+    list.source === "smart"
+      ? { label: `Prospects ${compactCount(list.records)}`, variant: "prospect" }
+      : { label: `Records ${compactCount(list.records)}`, variant: "record" },
+  ];
+}
 
 const CHIP_STYLES: Record<ChipVariant, string> = {
   prospect: "bg-[#f1f9fd] text-[#008dc3]",
@@ -184,7 +172,7 @@ function SavingAudienceCard({ card }: { card: SavingCard }) {
   );
 }
 
-function AudienceCard({ card, onClick }: { card: SavedListCard; onClick?: () => void }) {
+function AudienceCard({ card, onClick }: { card: SavedList; onClick?: () => void }) {
   const [menuOpen, setMenuOpen] = useState(false);
   return (
     <div onClick={onClick} className="bg-white border border-[#d0d5dd] rounded-lg shadow-sm flex flex-col gap-4 pt-4 pb-6 px-[18px] min-h-[169px] cursor-pointer hover:border-[#93c5fd] hover:shadow-md transition-all">
@@ -227,7 +215,7 @@ function AudienceCard({ card, onClick }: { card: SavedListCard; onClick?: () => 
       </div>
       {/* Chips */}
       <div className="flex gap-1 flex-wrap">
-        {card.chips.map((chip, i) => (
+        {listChips(card).map((chip, i) => (
           <Chip key={i} {...chip} />
         ))}
       </div>
@@ -320,8 +308,88 @@ function SimpleDonutChart({ title, segments, centerLabel }: { title: string; seg
   );
 }
 
-function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => void }) {
+const MASKED_ROWS = [
+  { name: "A******** ****** ***", city: "Austin, TX", phone: "(512) ***-****", industry: "Restaurants 5812-08", revenue: "Less Than $500,000", size: "1-4", contact: "B******* A********", title: "Owner" },
+  { name: "D*** ********** ***", city: "Dallas, TX", phone: "(214) ***-****", industry: "Restaurants 5812-08", revenue: "$1-2.5 Million", size: "20-49", contact: "L*** D***", title: "Owner" },
+  { name: "C****** ********* *****", city: "Houston, TX", phone: "(713) ***-****", industry: "Restaurants 5812-03", revenue: "$500,000-1 Million", size: "5-9", contact: "M******** C*****", title: "General Manager" },
+  { name: "G****** ******** ***", city: "San Antonio, TX", phone: "(210) ***-****", industry: "Restaurants 5812-01", revenue: "Less Than $500,000", size: "1-4", contact: "R***** G*****", title: "Manager" },
+  { name: "T**** ******* *****", city: "Fort Worth, TX", phone: "(817) ***-****", industry: "Restaurants 5812-08", revenue: "$2.5-5 Million", size: "50-99", contact: "S**** T****", title: "Owner" },
+];
+
+function MaskedLeadsTable({ records, onExport }: { records: number; onExport: () => void }) {
+  return (
+    <div className="overflow-hidden rounded-lg border border-[#eaecf0]">
+      <div className="flex items-center justify-between gap-3 border-b border-[#eaecf0] px-4 py-3">
+        <p className="text-sm font-medium text-[#475467]">
+          <span className="font-semibold text-[#1d2939]">{records.toLocaleString()}</span> businesses
+        </p>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={onExport}
+            className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d0d5dd] px-3 text-sm font-medium text-[#344054] hover:bg-[#f9fafb]"
+          >
+            <svg viewBox="0 0 16 16" fill="none" className="size-4" stroke="currentColor" strokeWidth="1.5"><path d="M8 2v8m0 0l-3-3m3 3l3-3M2.5 11v1.5a1 1 0 001 1h9a1 1 0 001-1V11" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            Export
+          </button>
+          <button type="button" className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[#d0d5dd] px-3 text-sm font-medium text-[#344054] hover:bg-[#f9fafb]">
+            Filters
+          </button>
+        </div>
+      </div>
+      <table className="w-full border-collapse text-left text-sm">
+        <thead>
+          <tr className="bg-[#f9fafb] text-xs font-medium text-[#667085]">
+            {["Business Information", "Business Details", "Contacts", "Actions", "Assignee"].map((h) => (
+              <th key={h} className="border-b border-[#eaecf0] px-4 py-2.5 font-medium">{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {MASKED_ROWS.map((row) => (
+            <tr key={row.name} className="border-b border-[#eaecf0] last:border-b-0">
+              <td className="px-4 py-3 align-top">
+                <p className="font-medium text-[#1d2939]">{row.name}</p>
+                <p className="mt-1 text-xs text-[#667085]">{row.city}</p>
+                <p className="mt-0.5 text-xs text-[#667085]">{row.phone}</p>
+              </td>
+              <td className="px-4 py-3 align-top text-xs text-[#475467]">
+                <p>{row.industry}</p>
+                <p className="mt-1">{row.revenue}</p>
+                <p className="mt-1">{row.size}</p>
+              </td>
+              <td className="px-4 py-3 align-top">
+                <p className="font-medium text-[#1d2939]">{row.contact}</p>
+                <p className="text-xs text-[#667085]">{row.title}</p>
+              </td>
+              <td className="px-4 py-3 text-[#98a2b3]">--</td>
+              <td className="px-4 py-3 text-[#98a2b3]">--</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+function SavedListDetail({
+  card,
+  scenario,
+  onBack,
+  onSeeOptions,
+  onBuyList,
+  onExport,
+}: {
+  card: SavedList;
+  scenario: UserScenario;
+  onBack: () => void;
+  onSeeOptions: () => void;
+  onBuyList: () => void;
+  onExport: () => void;
+}) {
   const [detailTab, setDetailTab] = useState<"list" | "map" | "insights">("list");
+  const isFreemium = scenario.startsWith("freemium-");
+  const activating = scenario === "freemium-activating";
 
   const tabs = [
     { key: "list" as const, label: "List" },
@@ -336,7 +404,15 @@ function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => 
           <button onClick={onBack} className="text-[#475467] hover:text-[#1d2939] transition-colors">
             <svg viewBox="0 0 20 20" fill="none" className="size-5" stroke="currentColor" strokeWidth="1.5"><path d="M13 4l-6 6 6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
           </button>
-          <h2 className="text-xl font-semibold text-[#1d2939]">{card.name}</h2>
+          <div>
+            <h2 className="flex items-center gap-2 text-xl font-semibold text-[#1d2939]">
+              {card.name}
+              {card.purchased && (
+                <span className="rounded-full bg-[#F2F9F7] px-2 py-0.5 text-xs font-medium text-[#0D7867]">Purchased</span>
+              )}
+            </h2>
+            <p className="text-xs text-[#667085]">{card.date}</p>
+          </div>
           {card.source === "smart" && (
             <span className="flex items-center gap-1 text-xs font-medium text-[#667085] bg-[#f2f4f7] rounded-full px-2.5 py-0.5">
               <SmartRecIcon /> Smart recommendation
@@ -365,15 +441,7 @@ function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => 
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-10">
-        {detailTab === "list" && (
-          <div className="text-sm text-[#475467]">
-            <p className="mb-2">Showing saved leads for <strong className="text-[#1d2939]">{card.name}</strong></p>
-            <p className="text-xs text-[#667085]">{card.date}</p>
-            <div className="mt-4 bg-[#f9fafb] border border-[#eaecf0] rounded-xl p-6 text-center text-sm text-[#667085]">
-              Lead data table preview (prototype placeholder)
-            </div>
-          </div>
-        )}
+        {detailTab === "list" && <MaskedLeadsTable records={card.records} onExport={onExport} />}
 
         {detailTab === "map" && (
           <div className="bg-[#f9fafb] border border-[#eaecf0] rounded-xl p-10 text-center text-sm text-[#667085]">
@@ -404,18 +472,51 @@ function SavedListDetail({ card, onBack }: { card: SavedListCard; onBack: () => 
           </div>
         )}
       </div>
+
+      {isFreemium && !card.purchased &&
+        (activating ? (
+          <PageBanner
+            title={`Tap into ${card.records.toLocaleString()} records before your competitors do`}
+            subtitle="Purchase this for export and receive 30 days online access for free."
+            cta={{ label: "Buy List", onClick: onBuyList }}
+          />
+        ) : (
+          <PageBanner
+            title={`Tap into ${card.records.toLocaleString()} leads before your competitors do`}
+            subtitle="Subscriptions offer full access to fresh data, and built-in outreach tools. Or, buy a list to view and export."
+            cta={{ label: "See options", onClick: onSeeOptions }}
+          />
+        ))}
     </div>
   );
 }
 
 // ─── Main View ────────────────────────────────────────────────────────────────
 
-export default function SavedListsView({ onStartAISearch }: SavedListsViewProps) {
+export default function SavedListsView({
+  scenario,
+  lists,
+  openListId,
+  onOpenList,
+  onSearchLeads,
+  onSeeOptions,
+  onBuyList,
+  onExport,
+}: SavedListsViewProps) {
   const [activeTab, setActiveTab] = useState<"saved" | "assigned">("saved");
-  const [selectedCard, setSelectedCard] = useState<SavedListCard | null>(null);
+  const selectedCard = lists.find((l) => l.id === openListId) ?? null;
 
   if (selectedCard) {
-    return <SavedListDetail card={selectedCard} onBack={() => setSelectedCard(null)} />;
+    return (
+      <SavedListDetail
+        card={selectedCard}
+        scenario={scenario}
+        onBack={() => onOpenList(null)}
+        onSeeOptions={() => onSeeOptions(selectedCard)}
+        onBuyList={() => onBuyList(selectedCard)}
+        onExport={() => onExport(selectedCard)}
+      />
+    );
   }
 
   return (
@@ -456,9 +557,11 @@ export default function SavedListsView({ onStartAISearch }: SavedListsViewProps)
               <span className="text-base font-medium text-[#475467]">Import</span>
             </button>
             <button
+              type="button"
+              onClick={onSearchLeads}
               className="bg-[#008dc3] border border-[#008dc3] text-white text-base font-medium px-5 py-3 rounded-lg hover:bg-[#007aab] transition-colors"
             >
-              Buy list(s)
+              Search for leads
             </button>
           </div>
         </div>
@@ -508,8 +611,8 @@ export default function SavedListsView({ onStartAISearch }: SavedListsViewProps)
             {SAVING_CARDS.map((card, i) => (
               <SavingAudienceCard key={`saving-${i}`} card={card} />
             ))}
-            {CARDS.map((card, i) => (
-              <AudienceCard key={i} card={card} onClick={() => setSelectedCard(card)} />
+            {lists.map((card) => (
+              <AudienceCard key={card.id} card={card} onClick={() => onOpenList(card.id)} />
             ))}
           </div>
         </div>

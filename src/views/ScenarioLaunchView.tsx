@@ -40,6 +40,17 @@ const CARDS: ScenarioCard[] = [
     ],
   },
   {
+    id: "freemium-activating",
+    promptsOverride: 20,
+    title: "Freemium — Subscription Activating",
+    badge: "freemium",
+    bullets: [
+      "Bought a subscription; order being verified",
+      "Left nav: \"Activating your subscription plan\"",
+      "Buy List goes straight to checkout",
+    ],
+  },
+  {
     id: "subscriber-free",
     promptsOverride: 20,
     title: "New Subscriber",

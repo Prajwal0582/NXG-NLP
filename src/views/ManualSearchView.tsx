@@ -1,9 +1,26 @@
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import emptyIllustration from "../assets/manual-search-empty.png";
+import PageBanner from "../components/PageBanner";
+import SaveListModal from "../components/SaveListModal";
+
+/** The last search, kept in App so Export configuration / checkout can come back to the results. */
+export interface SearchSnapshot {
+  term: string;
+  kind: "industry" | "business";
+}
 
 interface ManualSearchViewProps {
   onBack: () => void;
-  onPlans: () => void;
+  isFreemium: boolean;
+  /** Subscription order being verified: banner offers "Buy List" straight to checkout. */
+  subscriptionActivating: boolean;
+  initialSearch?: SearchSnapshot | null;
+  onSearch: (search: SearchSnapshot | null) => void;
+  /** Banner "See options" → pricing for this search. */
+  onSeeOptions: (term: string, records: number) => void;
+  onBuyList: (term: string, records: number) => void;
+  onExport: (term: string, records: number) => void;
+  onSaveList: (name: string, records: number) => void;
 }
 
 type Phase = "idle" | "suggesting" | "loading" | "results";
@@ -123,8 +140,10 @@ const MOCK_LEADS: LeadRow[] = [
   },
 ];
 
+const RESULT_COUNT = 37_610;
+
 const RESULT_STATS = {
-  businesses: "37,610",
+  businesses: RESULT_COUNT.toLocaleString(),
   contacts: "54,637",
   emails: "30.4K",
 };
@@ -227,24 +246,6 @@ function MapIcon() {
     <svg viewBox="0 0 16 16" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.4">
       <path d="M2 3.5l4 1.5 4-2 4 1.5v8l-4-1.5-4 2-4-1.5v-8z" strokeLinejoin="round" />
       <path d="M6 5v8M10 3v8" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function LockIcon() {
-  return (
-    <svg viewBox="0 0 14 14" fill="none" className="size-3.5" stroke="currentColor" strokeWidth="1.4">
-      <rect x="2.5" y="6" width="9" height="6.5" rx="1" />
-      <path d="M4.5 6V4.5a2.5 2.5 0 015 0V6" strokeLinecap="round" />
-    </svg>
-  );
-}
-
-function CheckIcon() {
-  return (
-    <svg viewBox="0 0 14 14" fill="none" className="size-3.5 shrink-0" aria-hidden>
-      <circle cx="7" cy="7" r="7" fill="#0BA38C" />
-      <path d="M4 7l2 2 4-4" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -382,13 +383,32 @@ function SkeletonBar({ className = "" }: { className?: string }) {
 
 // ── Main view ────────────────────────────────────────────────────────────────
 
-export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewProps) {
-  const [phase, setPhase] = useState<Phase>("idle");
-  const [query, setQuery] = useState("");
+function searchChips(term: string, kind: SearchSnapshot["kind"]): FilterChip[] {
+  return [
+    { id: "outreach", label: "Outreach type: Basic", gear: true },
+    { id: "biz", label: kind === "industry" ? `Industry: ${term}` : `Business Name: ${term}`, removable: true },
+  ];
+}
+
+export default function ManualSearchView({
+  onBack,
+  isFreemium,
+  subscriptionActivating,
+  initialSearch = null,
+  onSearch,
+  onSeeOptions,
+  onBuyList,
+  onExport,
+  onSaveList,
+}: ManualSearchViewProps) {
+  const [phase, setPhase] = useState<Phase>(initialSearch ? "results" : "idle");
+  const [query, setQuery] = useState(initialSearch?.term ?? "");
   const [location, setLocation] = useState("");
-  const [chips, setChips] = useState<FilterChip[]>([]);
+  const [chips, setChips] = useState<FilterChip[]>(() =>
+    initialSearch ? searchChips(initialSearch.term, initialSearch.kind) : [],
+  );
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [saveOpen, setSaveOpen] = useState(false);
   const suggestRef = useRef<HTMLDivElement>(null);
   const queryInputRef = useRef<HTMLInputElement>(null);
 
@@ -412,12 +432,9 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
   }, [phase]);
 
   function runSearch(term: string, kind: "industry" | "business" = "business") {
-    const label = kind === "industry" ? `Industry: ${term}` : `Business Name: ${term}`;
     setQuery(term);
-    setChips([
-      { id: "outreach", label: "Outreach type: Basic", gear: true },
-      { id: "biz", label, removable: true },
-    ]);
+    setChips(searchChips(term, kind));
+    onSearch({ term, kind });
     setPhase("loading");
     setFiltersOpen(false);
     window.setTimeout(() => setPhase("results"), 900);
@@ -427,14 +444,17 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
     setChips([]);
     setQuery("");
     setPhase("idle");
+    onSearch(null);
   }
 
   function removeChip(id: string) {
     const next = chips.filter((c) => c.id !== id);
     setChips(next);
-    if (next.length === 0) {
+    if (next.length <= 1) {
+      setChips([]);
       setQuery("");
       setPhase("idle");
+      onSearch(null);
     }
   }
 
@@ -464,14 +484,17 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
           <div className="flex shrink-0 items-center gap-2">
             <button
               type="button"
-              className="flex size-9 items-center justify-center rounded-lg border border-[#D0D5DD] text-[#475467] hover:bg-[#F9FAFB]"
+              onClick={() => phase === "results" && onExport(query, RESULT_COUNT)}
+              className={`flex size-9 items-center justify-center rounded-lg border border-[#D0D5DD] ${
+                phase === "results" ? "text-[#475467] hover:bg-[#F9FAFB]" : "cursor-default text-[#D0D5DD]"
+              }`}
               title="Export"
             >
               <DownloadIcon />
             </button>
             <button
               type="button"
-              onClick={() => hasResults && setUpgradeOpen(true)}
+              onClick={() => phase === "results" && setSaveOpen(true)}
               className={`h-9 rounded-lg px-4 text-sm font-medium leading-5 ${
                 phase === "results"
                   ? "bg-[#016DEE] text-white hover:bg-[#0052CC]"
@@ -750,7 +773,6 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
                           <tr
                             key={row.id}
                             className="border-b border-[#EAECF0] last:border-b-0 hover:bg-[#F9FAFB]"
-                            onClick={() => setUpgradeOpen(true)}
                           >
                             <td className="cursor-pointer px-4 py-3 align-top">
                               <div className="flex items-center gap-1.5 font-medium text-[#1D2939]">
@@ -792,46 +814,21 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
         </div>
       </div>
 
-      {/* Bottom CTA banner — results only */}
-      {phase === "results" && !upgradeOpen ? (
-        <div className="relative z-20 shrink-0 overflow-hidden bg-[#344054] px-6 py-5">
-          {/* Diamond lattice pattern */}
-          <div
-            className="pointer-events-none absolute inset-0 opacity-40"
-            style={{
-              backgroundImage: `
-                linear-gradient(45deg, rgba(255,255,255,0.07) 25%, transparent 25%),
-                linear-gradient(-45deg, rgba(255,255,255,0.07) 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.07) 75%),
-                linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.07) 75%)
-              `,
-              backgroundSize: "24px 24px",
-              backgroundPosition: "0 0, 0 12px, 12px -12px, -12px 0",
-            }}
+      {/* Bottom banner — freemium results only */}
+      {phase === "results" && isFreemium ? (
+        subscriptionActivating ? (
+          <PageBanner
+            title={`Tap into ${RESULT_STATS.businesses} records before your competitors do`}
+            subtitle="Purchase this for export and receive 30 days online access for free."
+            cta={{ label: "Buy List", onClick: () => onBuyList(query, RESULT_COUNT) }}
           />
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-[#1D2939]/80 to-transparent" />
-          <div className="pointer-events-none absolute -left-6 top-1/2 size-28 -translate-y-1/2 rounded-full bg-[#F79009]/30 blur-3xl" />
-          <div className="pointer-events-none absolute right-[28%] top-0 size-24 rounded-full bg-[#008DC3]/25 blur-3xl" />
-
-          <div className="relative flex w-full flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
-            <div className="min-w-0 max-w-[720px]">
-              <p className="text-lg font-semibold leading-7 text-white">
-                Tap into {RESULT_STATS.businesses} leads before your competitors do
-              </p>
-              <p className="mt-1 text-sm font-normal leading-5 text-white/75">
-                Subscriptions offer full access to fresh data, and built-in outreach tools. Or, buy a list to
-                view and export.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setUpgradeOpen(true)}
-              className="shrink-0 rounded-lg bg-[#F2F4F7] px-4 py-2.5 text-sm font-medium leading-5 text-[#1D2939] hover:bg-white"
-            >
-              See options
-            </button>
-          </div>
-        </div>
+        ) : (
+          <PageBanner
+            title={`Tap into ${RESULT_STATS.businesses} leads before your competitors do`}
+            subtitle="Subscriptions offer full access to fresh data, and built-in outreach tools. Or, buy a list to view and export."
+            cta={{ label: "See options", onClick: () => onSeeOptions(query, RESULT_COUNT) }}
+          />
+        )
       ) : null}
 
       {/* Filters drawer — fixed so it covers TopHeader / free-prompt bar too */}
@@ -916,104 +913,15 @@ export default function ManualSearchView({ onBack, onPlans }: ManualSearchViewPr
         </>
       ) : null}
 
-      {/* Upgrade / Buy — single bottom drawer with both options */}
-      {upgradeOpen ? (
-        <div className="absolute inset-0 z-50 flex flex-col justify-end">
-          <button
-            type="button"
-            className="absolute inset-0 bg-[#1D2939]/40 backdrop-blur-[2px]"
-            aria-label="Dismiss"
-            onClick={() => setUpgradeOpen(false)}
-          />
-          <div
-            className="relative z-10 flex max-h-[85%] w-full flex-col overflow-hidden rounded-t-2xl bg-white shadow-[0_-8px_40px_rgba(16,24,40,0.18)] animate-[slideUp_220ms_ease-out]"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="upgrade-drawer-title"
-          >
-            <div className="flex shrink-0 items-center justify-between bg-[#1D2939] px-5 py-2.5 text-white">
-              <div className="flex items-center gap-2 text-sm font-medium">
-                <LockIcon />
-                Upgrade Account or Buy List for full access.
-              </div>
-              <button
-                type="button"
-                onClick={() => setUpgradeOpen(false)}
-                className="rounded p-1 text-white/80 hover:bg-white/10 hover:text-white"
-                aria-label="Close"
-              >
-                <CloseIcon />
-              </button>
-            </div>
-
-            <div className="overflow-y-auto px-6 pt-5 pb-8">
-              <h3
-                id="upgrade-drawer-title"
-                className="mx-auto max-w-[560px] text-center text-xl font-semibold leading-7 text-[#1D2939]"
-              >
-                {RESULT_STATS.businesses} potential customers available. Choose an option to access them
-                all.
-              </h3>
-
-              <div className="mx-auto mt-6 grid w-full max-w-[680px] grid-cols-1 gap-4 sm:grid-cols-2">
-                <div className="relative rounded-xl border border-[#79C1E9] bg-[#F1F9FD] p-5 pt-6">
-                  <span className="absolute -top-2.5 left-4 rounded bg-[#016DEE] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-white uppercase">
-                    Best Value
-                  </span>
-                  <p className="text-lg font-semibold text-[#1D2939]">Upgrade Account</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUpgradeOpen(false);
-                      onPlans();
-                    }}
-                    className="mt-4 w-full rounded-lg bg-[#016DEE] py-2.5 text-sm font-medium text-white hover:bg-[#0052CC]"
-                  >
-                    View packages
-                  </button>
-                  <ul className="mt-4 flex flex-col gap-2.5">
-                    {[
-                      "Online access to all records",
-                      "Export records at a discount",
-                      "Weekly data refresh",
-                      "Built-in outreach tools",
-                      "Dedicated advisor support",
-                    ].map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-[#475467]">
-                        <CheckIcon /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-
-                <div className="rounded-xl border border-[#D0D5DD] bg-white p-5 pt-6">
-                  <p className="text-lg font-semibold text-[#1D2939]">Buy Now</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setUpgradeOpen(false);
-                      onPlans();
-                    }}
-                    className="mt-4 w-full rounded-lg border border-[#D0D5DD] bg-white py-2.5 text-sm font-medium text-[#475467] hover:bg-[#F9FAFB]"
-                  >
-                    Purchase list
-                  </button>
-                  <ul className="mt-4 flex flex-col gap-2.5">
-                    {[
-                      "Online access to purchased records",
-                      "Export purchased records",
-                      "One-time purchase — no subscription",
-                    ].map((f) => (
-                      <li key={f} className="flex items-start gap-2 text-sm text-[#475467]">
-                        <CheckIcon /> {f}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {saveOpen ? (
+        <SaveListModal
+          defaultName={query}
+          onConfirm={(name) => {
+            setSaveOpen(false);
+            onSaveList(name, RESULT_COUNT);
+          }}
+          onCancel={() => setSaveOpen(false)}
+        />
       ) : null}
     </div>
   );

@@ -14,7 +14,10 @@ import CreditMilestoneModal from "./components/CreditMilestoneModal";
 import ScenarioLaunchView from "./views/ScenarioLaunchView";
 import LandingView from "./views/LandingView";
 import ResultsView from "./views/ResultsView";
-import ManualSearchView from "./views/ManualSearchView";
+import ManualSearchView, { type SearchSnapshot } from "./views/ManualSearchView";
+import ExportConfigView from "./views/ExportConfigView";
+import PricingSheet from "./components/PricingSheet";
+import { INITIAL_SAVED_LISTS, listContext, savedListDate, type SavedList } from "./data/savedLists";
 import SavedListsView from "./views/SavedListsView";
 import PurchaseView from "./views/PurchaseView";
 import PurchaseSuccessView from "./views/PurchaseSuccessView";
@@ -26,6 +29,7 @@ function getInitialPrompts(scenario: UserScenario): number {
     case "freemium-24": return 24;
     case "freemium-5": return 5;
     case "freemium-0": return 0;
+    case "freemium-activating": return 20;
     case "subscriber-free": return 10;
     case "subscriber-credit": return 0;
     case "subscriber-credit-0": return 0;
@@ -72,22 +76,47 @@ export default function App() {
   const reservedCredits = getReservedCredits(scenario);
   const [selectedPlan, setSelectedPlan] = useState<SelectedPlanId>("pro");
   const [selectedBilling, setSelectedBilling] = useState<BillingPeriod>("monthly");
-  const [plansReturnView, setPlansReturnView] = useState<View>("landing");
-  /** Set only when entering Pricing from SignalFuse "Purchase list". Cleared for standard Access Pricing. */
+  /** The list Pricing / list checkout is about (search, saved list or NLP results). Null for plain "See options". */
   const [listPurchaseContext, setListPurchaseContext] = useState<ListPurchaseContext | null>(null);
+  /** Pricing sheet open over the current view. */
+  const [pricingOpen, setPricingOpen] = useState(false);
+  /** Where checkout's back arrow goes, and whether it reopens the pricing sheet. */
+  const [checkoutOrigin, setCheckoutOrigin] = useState<{ view: View; fromPricing: boolean }>({ view: "landing", fromPricing: false });
+  /** "Build my list" on Buy list → Search for leads; See options then recommends Buy list. */
+  const [buildListIntent, setBuildListIntent] = useState(false);
+  const [manualSearchKey, setManualSearchKey] = useState(0);
+  const [lastSearch, setLastSearch] = useState<SearchSnapshot | null>(null);
+  const [savedLists, setSavedLists] = useState<SavedList[]>(INITIAL_SAVED_LISTS);
+  const [openListId, setOpenListId] = useState<string | null>(null);
+  const [exportTarget, setExportTarget] = useState<{ listName: string; records: number; returnTo: View }>({
+    listName: "untitled list",
+    records: 0,
+    returnTo: "manual-search",
+  });
 
-  function openPlans(from: View = view === "scenario-launch" ? "landing" : view) {
-    // Standard pricing discovery — never inherit a prior list purchase context.
-    setListPurchaseContext(null);
-    setPlansReturnView(from === "plans" || from === "subscription-checkout" ? "landing" : from);
-    setView("plans");
+  const activating = scenario === "freemium-activating";
+
+  /** Opens the B3 pricing sheet over the current view. */
+  function openPricing(ctx: ListPurchaseContext | null = null) {
+    setListPurchaseContext(ctx);
+    setPricingOpen(true);
   }
 
-  function openPlansForListPurchase(resultCount: number) {
-    const ctx = buildListPurchaseContext(submittedPrompt, resultCount);
+  /** Subscription being verified: Buy List skips Pricing and goes straight to the list checkout. */
+  function openListCheckout(ctx: ListPurchaseContext, from: View) {
     setListPurchaseContext(ctx);
-    setPlansReturnView("results");
-    setView("plans");
+    setCheckoutOrigin({ view: from, fromPricing: false });
+    setView("purchase");
+  }
+
+  function backFromCheckout() {
+    setView(checkoutOrigin.view);
+    if (checkoutOrigin.fromPricing) setPricingOpen(true);
+  }
+
+  function openExport(listName: string, records: number, returnTo: View) {
+    setExportTarget({ listName, records, returnTo });
+    setView("export-config");
   }
 
   useEffect(() => {
@@ -105,6 +134,10 @@ export default function App() {
     setCreditsRemaining(getInitialCredits(s));
     setListSaved(false);
     setListPurchaseContext(null);
+    setPricingOpen(false);
+    setBuildListIntent(false);
+    setLastSearch(null);
+    setOpenListId(null);
     setView("landing");
   }
 
@@ -113,6 +146,8 @@ export default function App() {
   }
 
   function handleNavigate(v: View) {
+    setBuildListIntent(false);
+    if (v === "saved-lists") setOpenListId(null);
     setView(v);
   }
 
@@ -230,12 +265,17 @@ export default function App() {
             onDismissCreditCoach={() => setCreditCoachSeen(true)}
             onBack={() => setView("landing")}
             onHistory={() => setHistoryOpen(true)}
-            onPurchaseList={(resultCount) => openPlansForListPurchase(resultCount)}
+            onPurchaseList={(resultCount) => {
+              const ctx = buildListPurchaseContext(submittedPrompt, resultCount);
+              if (activating) openListCheckout(ctx, "results");
+              else openPricing({ ...ctx, recommendBuyList: true });
+            }}
             onBuyCredits={() => {
               setListPurchaseContext(null);
+              setCheckoutOrigin({ view: "results", fromPricing: false });
               setView("purchase");
             }}
-            onPlans={() => openPlans("results")}
+            onPlans={() => openPricing()}
             onSave={handleSaveList}
             onFeedback={handleFeedback}
             onFollowUp={handleFollowUp}
@@ -243,11 +283,67 @@ export default function App() {
         );
 
       case "manual-search":
-        return <ManualSearchView onBack={() => setView("landing")} onPlans={() => openPlans("manual-search")} />;
+        return (
+          <ManualSearchView
+            key={manualSearchKey}
+            onBack={() => setView("landing")}
+            isFreemium={isFree}
+            subscriptionActivating={activating}
+            initialSearch={lastSearch}
+            onSearch={setLastSearch}
+            onSeeOptions={(term, records) => openPricing(listContext("manual-search", term, records, buildListIntent))}
+            onBuyList={(term, records) => openListCheckout(listContext("manual-search", term, records, false), "manual-search")}
+            onExport={(term, records) => openExport(term, records, "manual-search")}
+            onSaveList={(name, records) => {
+              const id = `${name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-${Date.now()}`;
+              setSavedLists((lists) => [
+                { id, name, date: savedListDate(), source: "database", sourceLabel: "US Businesses", records },
+                ...lists,
+              ]);
+              setToast({ message: "List saved to Business Saved Lists.", type: "success" });
+              // "Save & Go to List" → the saved list (S2 / S3B start here).
+              setOpenListId(id);
+              setView("saved-lists");
+            }}
+          />
+        );
 
       case "saved-lists":
         return (
-          <SavedListsView scenario={scenario} onStartAISearch={() => setView("landing")} />
+          <SavedListsView
+            scenario={scenario}
+            lists={savedLists}
+            openListId={openListId}
+            onOpenList={setOpenListId}
+            onSearchLeads={() => {
+              setLastSearch(null);
+              setView("manual-search");
+            }}
+            onSeeOptions={(list) => openPricing(listContext("saved-list", list.name, list.records, false))}
+            onBuyList={(list) => openListCheckout(listContext("saved-list", list.name, list.records, false), "saved-lists")}
+            onExport={(list) => openExport(list.name, list.records, "saved-lists")}
+          />
+        );
+
+      case "export-config":
+        return (
+          <ExportConfigView
+            listName={exportTarget.listName}
+            records={exportTarget.records}
+            isFreemium={isFree}
+            subscriptionActivating={activating}
+            onBack={() => setView(exportTarget.returnTo)}
+            onUpgrade={() =>
+              openPricing(
+                listContext(
+                  exportTarget.returnTo === "saved-lists" ? "saved-list" : "manual-search",
+                  exportTarget.listName,
+                  exportTarget.records,
+                  false,
+                ),
+              )
+            }
+          />
         );
 
       case "purchase":
@@ -256,7 +352,7 @@ export default function App() {
             listName={listPurchaseContext?.listName ?? submittedPrompt.slice(0, 30)}
             isFreemium={isFree}
             purchaseContext={listPurchaseContext}
-            onBack={() => setView(listPurchaseContext ? "plans" : "results")}
+            onBack={backFromCheckout}
             onComplete={() => setView("purchase-success")}
           />
         );
@@ -264,26 +360,42 @@ export default function App() {
       case "purchase-success":
         return (
           <PurchaseSuccessView
-            onViewList={() => setView("results")}
-            onNewSearch={() => setView("landing")}
-          />
-        );
-
-      case "plans":
-        return (
-          <PlansView
-            purchaseContext={listPurchaseContext}
-            onBack={() => setView(plansReturnView === "subscription-checkout" ? "landing" : plansReturnView)}
-            onSelectPlan={(planId, billing) => {
-              setSelectedPlan(planId);
-              setSelectedBilling(billing);
-              setView("subscription-checkout");
+            listName={listPurchaseContext?.listName}
+            recordCount={listPurchaseContext?.resultCount}
+            amountPaid={listPurchaseContext?.estimatedPrice}
+            onViewList={() => {
+              const ctx = listPurchaseContext;
+              if (!ctx || ctx.source === "signalfuse-results") {
+                setView("results");
+                return;
+              }
+              const existing = savedLists.find((l) => l.name === ctx.listName);
+              if (existing) {
+                setSavedLists((lists) => lists.map((l) => (l.id === existing.id ? { ...l, purchased: true } : l)));
+                setOpenListId(existing.id);
+              } else {
+                const id = `purchased-${Date.now()}`;
+                setSavedLists((lists) => [
+                  {
+                    id,
+                    name: ctx.listName,
+                    date: savedListDate(),
+                    source: "database",
+                    sourceLabel: "US Businesses",
+                    records: ctx.resultCount,
+                    purchased: true,
+                  },
+                  ...lists,
+                ]);
+                setOpenListId(id);
+              }
+              setView("saved-lists");
             }}
-            onSearchLeads={() => {
-              setListPurchaseContext(null);
-              setView("landing");
+            onNewSearch={() => {
+              setLastSearch(null);
+              setManualSearchKey((k) => k + 1);
+              setView("manual-search");
             }}
-            onBuyListCheckout={() => setView("purchase")}
           />
         );
 
@@ -292,10 +404,19 @@ export default function App() {
           <SubscriptionCheckoutView
             planId={selectedPlan}
             billing={selectedBilling}
-            onBack={() => setView("plans")}
+            onBack={backFromCheckout}
             onComplete={() => {
+              setView(checkoutOrigin.view);
+              if (isFree) {
+                // Freemium → subscription order is verified before access (Figma "Pending order notifications").
+                setScenario("freemium-activating");
+                setToast({
+                  message: "Thank you for your subscription! We're processing your order and activating your subscription.",
+                  type: "success",
+                });
+                return;
+              }
               setToast({ message: `${selectedPlan.charAt(0).toUpperCase()}${selectedPlan.slice(1)} ${selectedBilling} subscription started.`, type: "success" });
-              setView("landing");
             }}
           />
         );
@@ -306,7 +427,7 @@ export default function App() {
   }
 
   // Full-page experiences: no app sidebar / top header
-  if (view === "scenario-launch" || view === "plans" || view === "subscription-checkout") {
+  if (view === "scenario-launch" || view === "subscription-checkout") {
     return (
       <>
         {renderContent()}
@@ -325,7 +446,8 @@ export default function App() {
         currentView={view}
         onNavigate={handleNavigate}
         isSubscriber={!isFree}
-        onPlans={() => openPlans("landing")}
+        subscriptionActivating={activating}
+        onPlans={() => openPricing()}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -338,7 +460,7 @@ export default function App() {
           creditsRemaining={creditsRemaining}
           reservedCredits={reservedCredits}
           onLogout={handleLogout}
-          onPlans={() => openPlans("landing")}
+          onPlans={() => openPricing()}
         />
         <div className="flex-1 overflow-hidden bg-white">
           {renderContent()}
@@ -392,6 +514,43 @@ export default function App() {
           onContinue={() => setMilestoneModalOpen(false)}
           onViewBalance={() => setMilestoneModalOpen(false)}
         />
+      )}
+
+      {pricingOpen && (
+        <PricingSheet onClosed={() => setPricingOpen(false)}>
+          {(close) => (
+            <PlansView
+              purchaseContext={listPurchaseContext}
+              onBack={close}
+              onSelectPlan={(planId, billing) => {
+                setSelectedPlan(planId);
+                setSelectedBilling(billing);
+                setCheckoutOrigin({ view, fromPricing: true });
+                setPricingOpen(false);
+                setView("subscription-checkout");
+              }}
+              onSearchLeads={() => {
+                // Build my list → Search for leads; See options there recommends Buy list.
+                close();
+                setListPurchaseContext(null);
+                setLastSearch(null);
+                setBuildListIntent(true);
+                setManualSearchKey((k) => k + 1);
+                setView("manual-search");
+              }}
+              onBuyListCheckout={() => {
+                setCheckoutOrigin({ view, fromPricing: true });
+                setPricingOpen(false);
+                setView("purchase");
+              }}
+              hideOptionSwitcher
+              salesConfirmInline
+              scrollHint
+              fixedOption="b3"
+              fixedGroupStyle="sections"
+            />
+          )}
+        </PricingSheet>
       )}
 
       {toast && (
