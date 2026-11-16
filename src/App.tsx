@@ -370,6 +370,7 @@ export default function App() {
             purchaseContext={listPurchaseContext}
             onBack={backFromCheckout}
             onComplete={() => setView("purchase-success")}
+            onSubscribe={() => openPricing(listPurchaseContext)}
           />
         );
 
@@ -442,8 +443,8 @@ export default function App() {
     }
   }
 
-  // Full-page experiences: no app sidebar / top header
-  if (view === "scenario-launch" || view === "subscription-checkout") {
+  // Full-page experience: scenario picker has no app shell
+  if (view === "scenario-launch") {
     return (
       <>
         {renderContent()}
@@ -469,7 +470,8 @@ export default function App() {
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <TopHeader
+        {/* Figma S1 checkout: left navigation, no top header */}
+        {view !== "subscription-checkout" && <TopHeader
           scenario={scenario}
           onScenarioChange={handleScenarioChange}
           promptsRemaining={promptsRemaining}
@@ -480,7 +482,7 @@ export default function App() {
           onLogout={handleLogout}
           onPlans={() => openPricing()}
           suppressSpotlight={!awarenessCalm}
-        />
+        />}
         <div className="flex-1 overflow-hidden bg-white">
           {renderContent()}
         </div>

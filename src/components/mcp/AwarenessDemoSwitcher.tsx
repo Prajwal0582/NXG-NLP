@@ -13,7 +13,7 @@ const STATUS_STYLE = {
 /** Prototype-only control (not product UI): pick an awareness concept and reset the per-user flag. */
 export default function AwarenessDemoSwitcher() {
   const mcp = useMcpAwareness();
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const preset = PRESETS.find((p) => p.id === mcp.preset)!;
 
   return (

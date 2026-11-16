@@ -217,6 +217,7 @@ function FeatureRows({
                   {item.usesCredits && <CreditMark />}
                 </span>
                 {tip ? <InfoTip text={tip} /> : item.info ? <InfoIcon /> : null}
+                {isExpandable && item.alwaysOpen ? <ChevronIcon expanded /> : null}
               </div>
             )}
             {isExpandable && isOpen && item.children?.map((child) => (
@@ -234,6 +235,33 @@ function FeatureRows({
           </div>
         );
       })}
+    </>
+  );
+}
+
+/**
+ * Mobile (< 640px): feature lists collapse behind a "Key features" toggle
+ * (Figma "Pricing / Key features toggle", Collapsed / Expanded). Tablet and desktop always show them.
+ */
+function KeyFeaturesCollapse({ children }: { children: ReactNode }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        data-keep-selection
+        aria-expanded={open}
+        onClick={(e) => {
+          e.stopPropagation();
+          setOpen((o) => !o);
+        }}
+        onKeyDown={(e) => e.stopPropagation()}
+        className="mx-4 flex items-center justify-between border-t border-[#EAECF0] py-4 text-left text-sm font-semibold leading-5 text-[#1D2939] sm:hidden"
+      >
+        Key features
+        <ChevronIcon expanded={open} />
+      </button>
+      <div className={`${open ? "flex" : "hidden"} min-h-0 flex-1 flex-col self-stretch sm:flex`}>{children}</div>
     </>
   );
 }
@@ -337,7 +365,10 @@ function PlanFeatureChecklist({
       )}
       {plan.addons && (
         <div className={`mt-auto flex flex-col ${sectionGap} pt-2 border-t border-[#EAECF0]`}>
-          <p className="text-sm font-semibold leading-5 text-[#667085]">Additional paid features</p>
+          <div className="flex items-center gap-2">
+            <p className="text-sm font-semibold leading-5 text-[#667085]">Additional paid features</p>
+            <AddonChip />
+          </div>
           {plan.addons.map((addon) => (
             <div key={addon.label} className="flex items-center justify-between gap-2">
               <div className="flex min-w-0 items-center gap-2">
@@ -347,7 +378,6 @@ function PlanFeatureChecklist({
                   <InfoTip text={resolveTooltip(addon.label)!} />
                 ) : null}
               </div>
-              <AddonChip />
             </div>
           ))}
         </div>
@@ -757,31 +787,43 @@ function CompanionCard({
 /** Sales line shown under "Request a call" (same number as the comparison footer). */
 const SALES_PHONE = "877.708.3844";
 
-/** Tray (Bravio style) — "Can't decide? Let's talk" bar inside the tray. */
-function TalkBar({ onTalkToSales, sent = false }: { onTalkToSales: () => void; sent?: boolean }) {
+/**
+ * "Can't decide? Let's talk." — Figma "Pricing / Talk to sales bar", Style=Banner (Nov 13):
+ * dark bottom-banner look, support contact only (no "Request a call" until sales requests can be sent).
+ */
+function TalkBar(_props: { onTalkToSales: () => void; sent?: boolean }) {
   return (
     <div
       data-keep-selection
-      className="col-span-full flex flex-col gap-4 rounded-2xl bg-[#00729F] px-6 py-5 text-white sm:flex-row sm:items-center sm:justify-between"
+      className="relative col-span-full overflow-hidden rounded-2xl bg-[#344054] px-6 py-5 text-white"
     >
-      <div>
-        <p className="text-xl font-semibold leading-[30px]">Can&apos;t decide? Let&apos;s talk.</p>
-        <p className="text-sm leading-5 text-[#E0F2FE]">
-          Tell us what you&apos;re prospecting for and we&apos;ll recommend a plan, or set up custom seats for your team.
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 opacity-40"
+        style={{
+          backgroundImage: `
+            linear-gradient(45deg, rgba(255,255,255,0.07) 25%, transparent 25%),
+            linear-gradient(-45deg, rgba(255,255,255,0.07) 25%, transparent 25%),
+            linear-gradient(45deg, transparent 75%, rgba(255,255,255,0.07) 75%),
+            linear-gradient(-45deg, transparent 75%, rgba(255,255,255,0.07) 75%)
+          `,
+          backgroundSize: "24px 24px",
+          backgroundPosition: "0 0, 0 12px, 12px -12px, -12px 0",
+        }}
+      />
+      <div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-1/3 bg-gradient-to-r from-[#1D2939]/80 to-transparent" />
+      <div className="relative">
+        <p className="text-lg font-semibold leading-7">Can&apos;t decide? Let&apos;s talk.</p>
+        <p className="mt-1 text-sm leading-5 text-white/90">
+          For support, contact us at{" "}
+          <a href="tel:8668726917" className="text-[#7CD4FD] hover:underline">
+            866.872.6917
+          </a>
+          . or{" "}
+          <a href="mailto:jeannie.house@data-axle.com" className="text-[#7CD4FD] hover:underline">
+            jeannie.house@data-axle.com
+          </a>
         </p>
-      </div>
-      <div className="flex shrink-0 flex-col items-start gap-1.5 sm:items-center">
-        <button
-          type="button"
-          onClick={onTalkToSales}
-          className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-medium text-[#00729F] hover:bg-[#F0F9FF]"
-        >
-          <FontAwesomeIcon icon={sent ? faCircleCheckSolid : faPhone} className="text-[14px]" aria-hidden />
-          {sent ? "Request sent" : "Request a call"}
-        </button>
-        <a href={`tel:${SALES_PHONE.replace(/\./g, "")}`} className="text-xs leading-[18px] text-[#E0F2FE] hover:text-white hover:underline">
-          or call us at <span className="font-semibold text-white">{SALES_PHONE}</span>
-        </a>
       </div>
     </div>
   );
@@ -926,10 +968,8 @@ function PlanPriceV3({
               : `Save ${fmtMoney((v.included + v.bonus) * PAYG_CREDIT_RATE - v.difference)}/mo`,
             points: [
               "Credits power exports, email unlocks, campaigns, MCP and CRM integrations.",
-              <>
-                Need more seats?{" "}
-                <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} sent={salesRequested} />
-              </>,
+              // Figma Nov 13: plain info — backend can't send a sales request yet.
+              "Need more seats? Talk to sales.",
             ],
           };
 
@@ -952,7 +992,7 @@ function PlanPriceV3({
         <p className="mt-1 flex flex-wrap items-center gap-x-1.5 text-xs leading-[18px]">
           <FontAwesomeIcon icon={faCircleCheckSolid} className="text-[14px] text-[#0BA38C]" aria-hidden />
           <span className="font-semibold text-[#0D7867]">
-            Save {fmtMoney(Number(pricing.strikePrice.replace(/,/g, "")) - Number(pricing.display.replace(/,/g, "")))}/year
+            Save {fmtMoney(Number(pricing.strikePrice.replace(/,/g, "")) - Number(pricing.display.replace(/,/g, "")))}/yr
           </span>
           <span className="text-[#98A2B3]" aria-hidden>·</span>
           <span className="text-[#475467]">Pay for 10 months, get 12</span>
@@ -1435,7 +1475,8 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 </div>
                 )}
 
-                {/* Row 5 — feature checklists; addons bottom-aligned across cards */}
+                {/* Row 5 — feature checklists; addons bottom-aligned across cards (collapsible on mobile) */}
+                <KeyFeaturesCollapse>
                 <div className={`px-4 ${compact ? "pt-3 pb-5" : "py-6"} flex-1 min-h-0`}>
                   <PlanFeatureChecklist
                     plan={fullPlan}
@@ -1444,6 +1485,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                     compact={compact}
                   />
                 </div>
+                </KeyFeaturesCollapse>
                 </div>
               </div>
               </Fragment>
@@ -1563,6 +1605,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             </div>
             )}
 
+            <KeyFeaturesCollapse>
             <div className={`px-4 ${compact ? "pt-3 pb-5" : "py-6"} flex-1 min-h-0`}>
               <PlanFeatureChecklist
                 plan={buyPlan}
@@ -1571,6 +1614,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 compact={compact}
               />
             </div>
+            </KeyFeaturesCollapse>
             </div>
           </div>
           )}

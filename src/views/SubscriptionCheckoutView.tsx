@@ -158,7 +158,7 @@ export default function SubscriptionCheckoutView({
   }
 
   return (
-    <div className="h-screen w-full overflow-y-auto bg-[#F9FAFB]">
+    <div className="h-full w-full overflow-y-auto bg-[#F9FAFB]">
       {/* Header — Figma: back + Checkout on page bg, no separate bar */}
       <div className="w-full px-8 pt-8 pb-2">
         <div className="flex items-center gap-2">
@@ -217,8 +217,8 @@ export default function SubscriptionCheckoutView({
                 {meta.includedCredits === 0
                   ? "Your selected plan does not include any shared credits. Add credits anytime before checkout"
                   : billing === "annual"
-                    ? `Your ${plan.name} plan includes ${meta.includedCredits.toLocaleString()} credits/month (${(meta.includedCredits * 12).toLocaleString()}/yr, provided upfront)${hasBonus ? ` + ${ANNUAL_BONUS.toLocaleString()} annual bonus credits` : ""}. Adjust if you need more.`
-                    : `Your ${plan.name} plan includes ${meta.includedCredits.toLocaleString()} credits/month. Adjust if you need more.`}
+                    ? `${plan.name} includes ${(meta.includedCredits * 12).toLocaleString()} credits/yr, provided upfront${hasBonus ? ` + ${ANNUAL_BONUS.toLocaleString()} annual bonus credits` : ""}. Need more? Add credits anytime before checkout.`
+                    : `${plan.name} includes ${meta.includedCredits.toLocaleString()} credits/mo. Need more? Add credits anytime before checkout.`}
               </p>
             </div>
 
@@ -401,8 +401,8 @@ export default function SubscriptionCheckoutView({
                 <h2 className="text-lg font-semibold leading-7 text-[#344054]">Order Summary</h2>
                 <p className="mt-1 text-sm font-normal leading-5 text-[#475467]">
                   {billing === "annual"
-                    ? "Annual contract with upfront payment"
-                    : "Annual contract with monthly payment deductions"}
+                    ? "Annual contract · one upfront payment"
+                    : "Annual contract · monthly payments"}
                 </p>
               </div>
 
@@ -413,7 +413,7 @@ export default function SubscriptionCheckoutView({
                     {meta.includedCredits === 0
                       ? "no credits included"
                       : billing === "annual"
-                        ? `${(meta.includedCredits * 12).toLocaleString()} credits/yr`
+                        ? `${(meta.includedCredits * 12).toLocaleString()} credits`
                         : `${meta.includedCredits.toLocaleString()} credits/mo`}{" "}
                     · {meta.seats} seat
                     {meta.seats > 1 ? "s" : ""})
@@ -457,14 +457,12 @@ export default function SubscriptionCheckoutView({
                   </div>
                 )}
 
-                {(buyerIntent || purchaseSignals || extraCredits > 0) && (
-                  <div className="flex items-start gap-0.5">
-                    <p className="flex-1 text-base font-medium leading-6 text-[#344054]">
-                      Selected plan + Add-on (If any)
-                    </p>
-                    <MoneyParts amount={selectedSubtotal} />
-                  </div>
-                )}
+                <div className="flex items-start gap-0.5">
+                  <p className="flex-1 text-base font-medium leading-6 text-[#344054]">
+                    Selected plan + Add-on (If any)
+                  </p>
+                  <MoneyParts amount={selectedSubtotal} />
+                </div>
 
                 {billing === "annual" && (
                   <>
@@ -497,9 +495,7 @@ export default function SubscriptionCheckoutView({
                 <p className="flex-1 text-lg font-semibold leading-7 text-[#344054]">Payable amount</p>
                 <span className="whitespace-nowrap text-[#1D2939]">
                   <MoneyParts amount={payable} size="xl" />
-                  {billing === "monthly" ? (
-                    <span className="text-sm font-medium leading-5">/mo</span>
-                  ) : null}
+                  <span className="text-sm font-medium leading-5">{billing === "monthly" ? "/mo" : "/yr"}</span>
                 </span>
               </div>
 
@@ -552,17 +548,8 @@ export default function SubscriptionCheckoutView({
                 disabled={!termsAgreed}
                 className="w-full rounded-lg border border-[#008DC3] bg-[#008DC3] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#00729F] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Start subscription
+                Place order
               </button>
-
-              <div className="flex flex-col items-center gap-1">
-                <p className="text-center text-xs font-normal leading-[18px] text-[#98A2B3]">
-                  256-bit SSL · PCI DSS · Powered by Stripe
-                </p>
-                <p className="text-center text-xs font-normal leading-[18px] text-[#98A2B3]">
-                  Secure payment powered by Stripe
-                </p>
-              </div>
             </div>
           </div>
         </div>
