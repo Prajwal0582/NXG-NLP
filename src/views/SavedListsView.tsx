@@ -3,6 +3,7 @@ import type { UserScenario } from "../types";
 import type { SavedList } from "../data/savedLists";
 import { compactCount } from "../data/savedLists";
 import PageBanner from "../components/PageBanner";
+import { McpSavedListsBanner } from "../components/mcp/McpSurfaces";
 
 interface SavedListsViewProps {
   scenario: UserScenario;
@@ -570,6 +571,9 @@ export default function SavedListsView({
       {/* Body */}
       <div className="flex-1 overflow-y-auto px-6 pt-6 pb-10">
         <div className="max-w-full">
+          {/* C · MCP connector contextual banner (awareness concept) */}
+          {activeTab === "saved" && <McpSavedListsBanner listName={lists[0]?.name ?? "saved lists"} />}
+
           {/* Search + filters */}
           <div className="flex items-center gap-4 mb-4">
             <div className="flex-1 max-w-[376px]">

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import type { UserScenario } from "../types";
+import NotificationBell from "./mcp/NotificationBell";
 
 interface TopHeaderProps {
   scenario: UserScenario;
@@ -11,6 +12,8 @@ interface TopHeaderProps {
   reservedCredits: number;
   onLogout: () => void;
   onPlans: () => void;
+  /** Hide the MCP bell spotlight while a sheet/modal is open or on flows it must not interrupt. */
+  suppressSpotlight?: boolean;
 }
 
 function LightningIcon({ className = "size-3", fill = "#016dee" }: { className?: string; fill?: string }) {
@@ -43,6 +46,7 @@ export default function TopHeader({
   creditsRemaining,
   onLogout,
   onPlans,
+  suppressSpotlight = false,
 }: TopHeaderProps) {
   const [avatarOpen, setAvatarOpen] = useState(false);
   const [pillOpen, setPillOpen] = useState(false);
@@ -131,6 +135,9 @@ export default function TopHeader({
           )}
         </div>
       ) : null}
+
+      {/* ── Notification center (bell) ─────────────────────────────── */}
+      <NotificationBell suppressSpotlight={suppressSpotlight} />
 
       {/* ── Profile avatar + dropdown ─────────────────────────────────── */}
       <div ref={avatarRef} className="relative">

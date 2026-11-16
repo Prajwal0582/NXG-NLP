@@ -10,6 +10,8 @@ interface ExportConfigViewProps {
   subscriptionActivating: boolean;
   onBack: () => void;
   onUpgrade: () => void;
+  /** Subscriber "Review export" → export starts (toast in App). */
+  onExportStarted?: () => void;
 }
 
 const FORMATS = ["Excel 2007/2010 (.xlsx)", "CSV (.csv)", "Text (.txt)"];
@@ -53,6 +55,7 @@ export default function ExportConfigView({
   subscriptionActivating,
   onBack,
   onUpgrade,
+  onExportStarted,
 }: ExportConfigViewProps) {
   const [recordsMode, setRecordsMode] = useState<"all" | "remaining" | "sample">("all");
   const [layout, setLayout] = useState<(typeof LAYOUTS)[number]>("Summary");
@@ -138,7 +141,7 @@ export default function ExportConfigView({
 
         {!isFreemium && (
           <div className="mt-8 flex justify-end">
-            <button type="button" className="h-10 rounded-lg bg-[#008DC3] px-5 text-sm font-medium text-white hover:bg-[#00729F]">
+            <button type="button" onClick={onExportStarted} className="h-10 rounded-lg bg-[#008DC3] px-5 text-sm font-medium text-white hover:bg-[#00729F]">
               Review export
             </button>
           </div>

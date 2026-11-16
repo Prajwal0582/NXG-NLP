@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import type { UserScenario } from "../types";
 import { SUGGESTED_PROMPTS } from "../data/searchScenarios";
+import { McpSavedListsBanner } from "../components/mcp/McpSurfaces";
 
 interface LandingViewProps {
   scenario: UserScenario;
@@ -113,6 +114,11 @@ export default function LandingView({
       </div>
 
       {/* Centered landing content */}
+      {/* C · MCP connector banner on the NLP search home (prototype; Figma + NLP rollout to confirm) */}
+      <div className="px-6 pt-4 shrink-0 empty:hidden">
+        <McpSavedListsBanner placement="search-home" className="" />
+      </div>
+
       <div className="flex-1 flex flex-col items-center justify-center px-8 pb-10">
         <div className="w-full max-w-[1061px]">
 

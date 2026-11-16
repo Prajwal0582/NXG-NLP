@@ -23,6 +23,10 @@ import PurchaseView from "./views/PurchaseView";
 import PurchaseSuccessView from "./views/PurchaseSuccessView";
 import PlansView from "./views/PlansView";
 import SubscriptionCheckoutView from "./views/SubscriptionCheckoutView";
+import { useMcpAwareness } from "./data/mcpAwareness";
+import SettingsSheet from "./components/mcp/SettingsSheet";
+import AwarenessDemoSwitcher from "./components/mcp/AwarenessDemoSwitcher";
+import { ExportStartedToast, McpWhatsNewCard } from "./components/mcp/McpSurfaces";
 
 function getInitialPrompts(scenario: UserScenario): number {
   switch (scenario) {
@@ -95,6 +99,14 @@ export default function App() {
   });
 
   const activating = scenario === "freemium-activating";
+
+  // ── MCP connector awareness (prototype) ──
+  const mcp = useMcpAwareness();
+  const [exportToast, setExportToast] = useState<{ listName: string; records: number } | null>(null);
+  const anyOverlayOpen =
+    pricingOpen || mcp.settingsOpen || historyOpen || feedbackModalOpen || creditConfirmOpen || saveListModalOpen || milestoneModalOpen;
+  /** Interruptive surfaces (B spotlight, E slide-in) only on calm pages, never over flows or modals. */
+  const awarenessCalm = !anyOverlayOpen && (view === "landing" || view === "saved-lists");
 
   /** Opens the B3 pricing sheet over the current view. */
   function openPricing(ctx: ListPurchaseContext | null = null) {
@@ -333,6 +345,10 @@ export default function App() {
             isFreemium={isFree}
             subscriptionActivating={activating}
             onBack={() => setView(exportTarget.returnTo)}
+            onExportStarted={() => {
+              setExportToast({ listName: exportTarget.listName, records: exportTarget.records });
+              setView(exportTarget.returnTo);
+            }}
             onUpgrade={() =>
               openPricing(
                 listContext(
@@ -448,6 +464,8 @@ export default function App() {
         isSubscriber={!isFree}
         subscriptionActivating={activating}
         onPlans={() => openPricing()}
+        onOpenSettings={() => mcp.openSettings(mcp.isLive("F") ? "mcp" : "general")}
+        settingsNew={mcp.preset === "F" && mcp.isLive("F")}
       />
 
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -461,6 +479,7 @@ export default function App() {
           reservedCredits={reservedCredits}
           onLogout={handleLogout}
           onPlans={() => openPricing()}
+          suppressSpotlight={!awarenessCalm}
         />
         <div className="flex-1 overflow-hidden bg-white">
           {renderContent()}
@@ -556,6 +575,12 @@ export default function App() {
       {toast && (
         <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
+
+      {/* ── MCP connector awareness ── */}
+      {mcp.settingsOpen && <SettingsSheet />}
+      {exportToast && <ExportStartedToast {...exportToast} onClose={() => setExportToast(null)} />}
+      <McpWhatsNewCard suppressed={!awarenessCalm} />
+      <AwarenessDemoSwitcher />
     </div>
   );
 }

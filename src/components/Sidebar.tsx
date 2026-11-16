@@ -12,6 +12,9 @@ interface SidebarProps {
   /** Freemium who bought a subscription that is still being verified (Figma "Pending order notifications"). */
   subscriptionActivating?: boolean;
   onPlans: () => void;
+  onOpenSettings: () => void;
+  /** Concept F alone: "New" chip on Settings so the landing page can be found. */
+  settingsNew?: boolean;
 }
 
 function SearchIcon() {
@@ -137,6 +140,8 @@ export default function Sidebar({
   isSubscriber,
   subscriptionActivating = false,
   onPlans,
+  onOpenSettings,
+  settingsNew = false,
 }: SidebarProps) {
   const isSearchActive =
     currentView === "landing" ||
@@ -200,7 +205,7 @@ export default function Sidebar({
             <button
               key={item.id}
               type="button"
-              onClick={() => item.view && onNavigate(item.view)}
+              onClick={() => (item.id === "settings" ? onOpenSettings() : item.view && onNavigate(item.view))}
               className={`flex w-full items-center gap-2 rounded p-2 text-left transition-colors ${
                 isActive ? "bg-[#344054] text-white" : "text-white hover:bg-white/10"
               }`}
@@ -210,6 +215,9 @@ export default function Sidebar({
               </span>
               <span className="flex-1 text-base font-normal leading-[26px]">{item.label}</span>
               {item.badge === "gem" ? <GemBadge /> : null}
+              {item.id === "settings" && settingsNew ? (
+                <span className="rounded-full bg-[#ECFDF3] px-1.5 py-px text-[11px] font-medium text-[#067647]">New</span>
+              ) : null}
             </button>
           );
         })}
