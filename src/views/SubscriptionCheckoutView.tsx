@@ -19,9 +19,12 @@ const PLAN_META = {
 const CREDIT_RATE_MONTHLY = 0.15;
 /** Annual bonus credits on Pro / Team — phase 2 (needs NXG ↔ OES automation); 0 in phase 1. */
 const ANNUAL_BONUS = 0;
+/** Self-serve credit cap: 5,000/mo (60,000/yr). One step past it = "Contact sales" (Surbhi, Nov 18). */
 const CREDIT_MAX = 5000;
 const CREDIT_STEP = 50;
 const ADDON_MONTHLY = 50;
+const SALES_PHONE = "877.708.3844";
+const SALES_EMAIL = "genie@data-axle.com";
 
 function formatMoney(amount: number, opts?: { cents?: boolean }) {
   const withCents = opts?.cents !== false;
@@ -134,7 +137,13 @@ export default function SubscriptionCheckoutView({
 
   const renewDate = useMemo(() => formatRenewDate(addOneYear(new Date())), []);
 
-  const extraCredits = Math.max(0, credits - meta.includedCredits);
+  /** Slider/input show credits per billing period: monthly → /mo, annual → /yr (×12). */
+  const unit = billing === "annual" ? 12 : 1;
+  const sliderMax = CREDIT_MAX + CREDIT_STEP; // last notch = "5,000+" → contact sales
+  const overCap = credits > CREDIT_MAX;
+  const capLabel = `${(CREDIT_MAX * unit).toLocaleString()} credits${billing === "annual" ? "/yr" : "/mo"}`;
+
+  const extraCredits = overCap ? 0 : Math.max(0, credits - meta.includedCredits);
   const creditMonthly = extraCredits * CREDIT_RATE_MONTHLY;
   const creditAnnual = creditMonthly * 10;
 
@@ -152,9 +161,12 @@ export default function SubscriptionCheckoutView({
   const selectedSubtotal = planList + addonCharge + creditCharge;
   const payable = planPay + addonCharge + creditCharge;
 
-  function clampCredits(n: number) {
-    const stepped = Math.round(n / CREDIT_STEP) * CREDIT_STEP;
-    return Math.min(CREDIT_MAX, Math.max(0, stepped));
+  /** Typed value is per billing period; anything above the cap snaps to the "contact sales" notch. */
+  function creditsFromInput(raw: string) {
+    const perPeriod = Number(raw.replace(/[^0-9]/g, "")) || 0;
+    const monthly = perPeriod / unit;
+    if (monthly > CREDIT_MAX) return sliderMax;
+    return Math.max(0, Math.round(monthly / CREDIT_STEP) * CREDIT_STEP);
   }
 
   return (
@@ -180,48 +192,6 @@ export default function SubscriptionCheckoutView({
         <div className="mx-auto flex w-full max-w-[1400px] flex-col items-start gap-6 lg:flex-row">
           {/* Left column */}
           <div className="flex min-w-0 flex-1 flex-col gap-6">
-            {/* Configure credits */}
-            <div className="rounded-lg border border-[#D0D5DD] bg-white p-4 shadow-[0_1px_2px_rgba(71,84,103,0.04)]">
-              <div className="flex items-start gap-4">
-                <div className="flex-1">
-                  <h2 className="text-base font-semibold leading-6 text-[#1D2939]">Configure your credits</h2>
-                </div>
-                <input
-                  type="number"
-                  min={0}
-                  max={CREDIT_MAX}
-                  step={CREDIT_STEP}
-                  value={credits}
-                  onChange={(e) => setCredits(clampCredits(Number(e.target.value) || 0))}
-                  className="w-[63px] rounded-lg border border-[#D0D5DD] bg-white px-2 py-1 text-right text-sm font-medium leading-5 text-[#475467] tabular-nums focus:border-[#008DC3] focus:outline-none"
-                  aria-label="Credit amount"
-                />
-              </div>
-
-              <div className="mt-2">
-                <input
-                  type="range"
-                  min={0}
-                  max={CREDIT_MAX}
-                  step={CREDIT_STEP}
-                  value={credits}
-                  onChange={(e) => setCredits(Number(e.target.value))}
-                  className="credit-slider w-full cursor-pointer"
-                  style={{
-                    background: `linear-gradient(to right, #008DC3 ${(credits / CREDIT_MAX) * 100}%, #BBDEFB ${(credits / CREDIT_MAX) * 100}%)`,
-                  }}
-                />
-              </div>
-
-              <p className="mt-1 text-xs font-normal leading-[18px] text-[#667085]">
-                {meta.includedCredits === 0
-                  ? "Your selected plan does not include any shared credits. Add credits anytime before checkout"
-                  : billing === "annual"
-                    ? `${plan.name} includes ${(meta.includedCredits * 12).toLocaleString()} credits/yr, provided upfront${hasBonus ? ` + ${ANNUAL_BONUS.toLocaleString()} annual bonus credits` : ""}. Need more? Add credits anytime before checkout.`
-                    : `${plan.name} includes ${meta.includedCredits.toLocaleString()} credits/mo. Need more? Add credits anytime before checkout.`}
-              </p>
-            </div>
-
             {/* Payment plan */}
             <div className="rounded-lg border border-[#D0D5DD] bg-white p-4 shadow-[0_1px_2px_rgba(71,84,103,0.04)]">
               <h2 className="mb-4 text-base font-semibold leading-6 text-[#1D2939]">Payment plan</h2>
@@ -284,6 +254,73 @@ export default function SubscriptionCheckoutView({
               <p className="mt-4 text-sm font-normal leading-5 text-[#475467]">
                 Membership renews <span className="font-medium text-[#1D2939]">{renewDate}</span>
               </p>
+            </div>
+
+            {/* Configure credits */}
+            <div className="rounded-lg border border-[#D0D5DD] bg-white p-4 shadow-[0_1px_2px_rgba(71,84,103,0.04)]">
+              <div className="flex items-start gap-4">
+                <div className="flex-1">
+                  <h2 className="text-base font-semibold leading-6 text-[#1D2939]">Configure your credits</h2>
+                </div>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={overCap ? `${(CREDIT_MAX * unit).toLocaleString()}+` : (credits * unit).toLocaleString()}
+                  onChange={(e) => setCredits(creditsFromInput(e.target.value))}
+                  className="w-[88px] rounded-lg border border-[#D0D5DD] bg-white px-2 py-1 text-right text-sm font-medium leading-5 text-[#475467] tabular-nums focus:border-[#008DC3] focus:outline-none"
+                  aria-label={billing === "annual" ? "Credits per year" : "Credits per month"}
+                />
+              </div>
+
+              <div className="mt-2">
+                <input
+                  type="range"
+                  min={0}
+                  max={sliderMax * unit}
+                  step={CREDIT_STEP * unit}
+                  value={credits * unit}
+                  onChange={(e) => setCredits(Number(e.target.value) / unit)}
+                  className="credit-slider w-full cursor-pointer"
+                  aria-valuetext={overCap ? `More than ${capLabel} — contact sales` : `${(credits * unit).toLocaleString()} credits`}
+                  style={{
+                    background: `linear-gradient(to right, #008DC3 ${(credits / sliderMax) * 100}%, #BBDEFB ${(credits / sliderMax) * 100}%)`,
+                  }}
+                />
+                <div className="mt-1 flex justify-between text-xs leading-[18px] text-[#98A2B3]">
+                  <span>0</span>
+                  <span>{(CREDIT_MAX * unit).toLocaleString()}+</span>
+                </div>
+              </div>
+
+              {overCap ? (
+                <div role="status" className="mt-3 flex items-start gap-3 rounded-lg border border-[#CAE6F9] bg-[#F1F9FD] p-3">
+                  <span className="mt-0.5 flex size-5 shrink-0 items-center justify-center rounded-full bg-[#008DC3] text-xs font-semibold text-white" aria-hidden>
+                    i
+                  </span>
+                  <div className="text-sm leading-5 text-[#344054]">
+                    <p className="font-semibold text-[#1D2939]">Need more than {capLabel}? Let&apos;s talk.</p>
+                    <p className="mt-0.5">
+                      Larger credit packs are priced by our sales team. Contact us at{" "}
+                      <a href={`tel:${SALES_PHONE.replace(/\./g, "")}`} className="font-medium text-[#008DC3] hover:underline">
+                        {SALES_PHONE}
+                      </a>{" "}
+                      or{" "}
+                      <a href={`mailto:${SALES_EMAIL}`} className="font-medium text-[#008DC3] hover:underline">
+                        {SALES_EMAIL}
+                      </a>
+                      , or move the slider back to {capLabel} or less to check out now.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+              <p className="mt-1 text-xs font-normal leading-[18px] text-[#667085]">
+                {meta.includedCredits === 0
+                  ? "Your selected plan does not include any shared credits. Add credits anytime before checkout"
+                  : billing === "annual"
+                    ? `${plan.name} includes ${(meta.includedCredits * 12).toLocaleString()} credits/yr, provided upfront${hasBonus ? ` + ${ANNUAL_BONUS.toLocaleString()} annual bonus credits` : ""}. Need more? Add credits anytime before checkout.`
+                    : `${plan.name} includes ${meta.includedCredits.toLocaleString()} credits/mo. Need more? Add credits anytime before checkout.`}
+              </p>
+              )}
             </div>
 
             {/* Additional features */}
@@ -435,6 +472,17 @@ export default function SubscriptionCheckoutView({
                   </div>
                 )}
 
+                {overCap && (
+                  <div className="flex items-start gap-0.5 border-b border-[#D0D5DD] pb-4">
+                    <p className="flex-1 text-base font-medium leading-6 text-[#344054]">
+                      Additional credits
+                      <br />
+                      <span className="text-sm font-normal text-[#667085]">More than {capLabel} · priced by sales</span>
+                    </p>
+                    <span className="whitespace-nowrap text-base font-medium leading-6 text-[#475467]">Contact sales</span>
+                  </div>
+                )}
+
                 {buyerIntent && (
                   <div className="flex items-start gap-0.5 border-b border-[#D0D5DD] pb-4">
                     <p className="flex-1 whitespace-pre-wrap text-base font-medium leading-6 text-[#344054]">
@@ -545,11 +593,16 @@ export default function SubscriptionCheckoutView({
               <button
                 type="button"
                 onClick={() => onComplete({ billing, monthlyCredits: credits })}
-                disabled={!termsAgreed}
+                disabled={!termsAgreed || overCap}
                 className="w-full rounded-lg border border-[#008DC3] bg-[#008DC3] py-3 text-sm font-semibold text-white transition-colors hover:bg-[#00729F] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 Place order
               </button>
+              {overCap && (
+                <p className="-mt-2 text-center text-xs leading-[18px] text-[#667085]">
+                  Orders above {capLabel} are completed with our sales team.
+                </p>
+              )}
             </div>
           </div>
         </div>

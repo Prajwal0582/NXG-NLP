@@ -153,6 +153,18 @@ export default function PlansView({
     setSalesToast(true);
     window.setTimeout(() => setSalesToast(false), 3200);
   }
+  /**
+   * "Talk to sales →" (Team card): sales requests can't be sent from the backend yet, so the link
+   * scrolls the drawer to the "Can't decide? Let's talk." banner (centred in view) and flashes it once.
+   */
+  function scrollToTalkBar() {
+    const bar = document.querySelector<HTMLElement>("[data-talk-bar]");
+    if (!bar) return;
+    bar.scrollIntoView({ behavior: "smooth", block: "center" });
+    bar.classList.remove("animate-talk-flash");
+    void bar.offsetWidth; // restart the animation on repeat clicks
+    bar.classList.add("animate-talk-flash");
+  }
   const [groupStyle, setGroupStyle] = useState<GroupStyle>(() => fixedGroupStyle ?? readGroupsParam());
 
   function changeGroupStyle(next: GroupStyle) {
@@ -232,7 +244,7 @@ export default function PlansView({
     return () => document.removeEventListener("mousedown", onPointerDown);
   }, [goal, selectedPlan, contextDefaultGoal, contextDefaultPlan, option, groupStyle]);
 
-  // One badge — MOST POPULAR on Pro by default; RECOMMENDED on the goal / recommended list plan.
+  // Pro always shows MOST POPULAR (in the layout). badgePlanId is the plan that also gets RECOMMENDED.
   const badgePlanId: PlanId = goal !== null ? GOAL_TO_PLAN[goal] : recommendsList ? "buy-list" : "pro";
   const activeBadgeLabel: "MOST POPULAR" | "RECOMMENDED" =
     goal !== null || recommendsList ? "RECOMMENDED" : "MOST POPULAR";
@@ -276,7 +288,7 @@ export default function PlansView({
         onBillingChange={setBilling}
         option={option}
         groupStyle={groupStyle}
-        onTalkToSales={() => requestSales("seats")}
+        onTalkToSales={scrollToTalkBar}
         onRequestCall={() => requestSales("general")}
         salesRequested={salesConfirmInline && salesRequested}
       />

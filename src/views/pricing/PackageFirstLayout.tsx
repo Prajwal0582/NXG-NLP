@@ -240,8 +240,8 @@ function FeatureRows({
 }
 
 /**
- * Mobile (< 640px): feature lists collapse behind a "Key features" toggle
- * (Figma "Pricing / Key features toggle", Collapsed / Expanded). Tablet and desktop always show them.
+ * Mobile + tablet (< 1280px): feature lists collapse behind a "Key features" toggle
+ * (Figma "Pricing / Key features toggle", Collapsed / Expanded). Desktop (4 columns) always shows them.
  */
 function KeyFeaturesCollapse({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
@@ -256,12 +256,12 @@ function KeyFeaturesCollapse({ children }: { children: ReactNode }) {
           setOpen((o) => !o);
         }}
         onKeyDown={(e) => e.stopPropagation()}
-        className="mx-4 flex items-center justify-between border-t border-[#EAECF0] py-4 text-left text-sm font-semibold leading-5 text-[#1D2939] sm:hidden"
+        className="mx-4 flex items-center justify-between border-t border-[#EAECF0] py-4 text-left text-sm font-semibold leading-5 text-[#1D2939] xl:hidden"
       >
         Key features
         <ChevronIcon expanded={open} />
       </button>
-      <div className={`${open ? "flex" : "hidden"} min-h-0 flex-1 flex-col self-stretch sm:flex`}>{children}</div>
+      <div className={`${open ? "flex" : "hidden"} min-h-0 flex-1 flex-col self-stretch xl:flex`}>{children}</div>
     </>
   );
 }
@@ -579,11 +579,22 @@ const PRICING_MAX_W = "mx-auto max-w-[1600px]";
 const GROUPED_GRID_COLS =
   "xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_12px_minmax(0,1fr)_12px_minmax(0,1fr)]";
 
+/**
+ * Tablet (md–xl, 2 columns): Basic + Pro under "Individual plans", then Team | Buy list side by side,
+ * each under its own label. Cards are 4-row subgrids so CTAs share one line in every row.
+ */
 const GROUPED_CARD_PLACEMENT: Record<PlanId, string> = {
-  basic: "xl:[grid-column:1] xl:[grid-row:2/span_4]",
-  pro: "xl:[grid-column:2] xl:[grid-row:2/span_4]",
-  team: "xl:[grid-column:4] xl:[grid-row:2/span_4]",
-  "buy-list": "xl:[grid-column:6] xl:[grid-row:2/span_4]",
+  basic: "md:[grid-column:1] md:[grid-row:2/span_4] xl:[grid-column:1] xl:[grid-row:2/span_4]",
+  pro: "md:[grid-column:2] md:[grid-row:2/span_4] xl:[grid-column:2] xl:[grid-row:2/span_4]",
+  team: "md:[grid-column:1] md:[grid-row:7/span_4] xl:[grid-column:4] xl:[grid-row:2/span_4]",
+  "buy-list": "md:[grid-column:2] md:[grid-row:7/span_4] xl:[grid-column:6] xl:[grid-row:2/span_4]",
+};
+
+/** Tablet placement of the group labels (desktop placement lives in each group's `column`). */
+const GROUP_LABEL_TABLET: Record<string, string> = {
+  individual: "md:[grid-column:1/span_2] md:[grid-row:1]",
+  team: "md:[grid-column:1] md:[grid-row:6] md:mt-4",
+  "one-time": "md:[grid-column:2] md:[grid-row:6] md:mt-4",
 };
 
 const PLAN_GROUPS = [
@@ -675,7 +686,7 @@ function GroupLabel({ group, groupStyle, active }: { group: PlanGroup; groupStyl
   if (groupStyle === "tabs" || groupStyle === "tabsBorder") return null;
   if (groupStyle === "tracks") {
     return (
-      <p className={`relative col-span-full flex items-center ${group.column} xl:[grid-row:1]`}>
+      <p className={`relative col-span-full flex items-center ${GROUP_LABEL_TABLET[group.id]} ${group.column} xl:[grid-row:1] xl:mt-0`}>
         <span
           className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-sm font-semibold leading-5 transition-colors duration-300 ${
             active ? group.accent.chipOn : group.accent.chip
@@ -691,7 +702,7 @@ function GroupLabel({ group, groupStyle, active }: { group: PlanGroup; groupStyl
   const tone = (groupStyle === "spotlight" || groupStyle === "sections") && active ? "text-[#008DC3]" : group.text;
   return (
     <p
-      className={`relative col-span-full flex items-center gap-2 text-sm font-semibold leading-5 transition-colors duration-300 ${tone} ${group.column} xl:[grid-row:1]`}
+      className={`relative col-span-full flex items-center gap-2 text-sm font-semibold leading-5 transition-colors duration-300 ${tone} ${GROUP_LABEL_TABLET[group.id]} ${group.column} xl:[grid-row:1] xl:mt-0`}
     >
       <FontAwesomeIcon icon={group.icon} className="text-[14px]" aria-hidden />
       {group.label}
@@ -795,6 +806,7 @@ function TalkBar(_props: { onTalkToSales: () => void; sent?: boolean }) {
   return (
     <div
       data-keep-selection
+      data-talk-bar
       className="relative col-span-full overflow-hidden rounded-2xl bg-[#344054] px-6 py-5 text-white"
     >
       <div
@@ -968,8 +980,10 @@ function PlanPriceV3({
               : `Save ${fmtMoney((v.included + v.bonus) * PAYG_CREDIT_RATE - v.difference)}/mo`,
             points: [
               "Credits power exports, email unlocks, campaigns, MCP and CRM integrations.",
-              // Figma Nov 13: plain info — backend can't send a sales request yet.
-              "Need more seats? Talk to sales.",
+              <>
+                Need more seats?{" "}
+                <TalkToSalesLink label="Talk to sales →" onClick={onTalkToSales} sent={salesRequested} />
+              </>,
             ],
           };
 
@@ -1328,7 +1342,9 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             const planId = plan.id as Exclude<PlanId, "buy-list">;
             const pricing = billing === "monthly" ? plan.monthly : plan.annual;
             const isSelected = selectedPlan === plan.id;
-            const showBadge = plan.id === badgePlanId;
+            // Pro always carries MOST POPULAR; a recommended plan (goal / Buy list flows) adds RECOMMENDED on its own card.
+            const showBadge = plan.id === "pro" || plan.id === badgePlanId;
+            const badgeLabel = plan.id === "pro" ? "MOST POPULAR" : activeBadgeLabel;
             const summary = PACKAGE_SUMMARIES[planId];
             const fullPlan = PLANS.find((p) => p.id === plan.id)!;
 
@@ -1352,7 +1368,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                 }}
                 className={`relative box-border h-full flex flex-col min-w-0 ${
                   sectioned ? GROUPED_CARD_PLACEMENT[plan.id] : "xl:row-span-4"
-                } xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible ${motion.className}${
+                } ${sectioned ? "md:grid md:grid-cols-[minmax(0,1fr)] md:grid-rows-subgrid md:gap-y-0" : ""} xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible ${motion.className}${
                   switchMode ? " animate-plan-rise" : ""
                 } ${
                   isSelected
@@ -1370,7 +1386,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
                       style={{ backgroundColor: selectedBar(plan.id) }}
                     />
                   )}
-                  {showBadge && <PlanBadge label={activeBadgeLabel} />}
+                  {showBadge && <PlanBadge label={badgeLabel} />}
                   {compact && billing === "annual" && plan.annual.strikePrice && <SaveRibbon />}
                   <div className={`flex flex-col ${compact ? "gap-1" : "gap-2"}`}>
                     {categoryRow(plan.id, plan.category)}
@@ -1512,7 +1528,7 @@ export function PackageFirstLayout(props: PackageFirstLayoutProps) {
             }}
             className={`relative box-border h-full flex flex-col min-w-0 ${
               sectioned ? GROUPED_CARD_PLACEMENT["buy-list"] + " border-dashed" : "xl:row-span-4"
-            } xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible ${
+            } ${sectioned ? "md:grid md:grid-cols-[minmax(0,1fr)] md:grid-rows-subgrid md:gap-y-0" : ""} xl:grid xl:grid-cols-[minmax(0,1fr)] xl:grid-rows-subgrid xl:gap-y-0 rounded-xl bg-white border cursor-pointer overflow-visible ${
               cardMotion("buy-list", buySelected).className
             }${switchMode ? " animate-plan-rise" : ""} ${
               buySelected
